@@ -1,0 +1,10 @@
+packages:
+  - .
+
+minimumReleaseAgeExclude:
+  - pdfjs-dist@6.3.289
+  - zod@4.5.4
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - esbuild
