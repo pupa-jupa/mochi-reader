@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A cozy local reader for books and manga"
 authors = ["Mochi Reader contributors"]
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 
 [lib]
 name = "mochi_reader_lib"
@@ -15,9 +15,11 @@ tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
 chrono = { version = "0.4.45", features = ["serde"] }
+infer = "0.22.0"
 rusqlite = { version = "0.40.2", features = ["bundled", "chrono", "uuid", "functions"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
+sha2 = "0.11.0"
 tauri = { version = "2.11.5", features = [] }
 tauri-plugin-clipboard-manager = "2.3.2"
 tauri-plugin-dialog = "2.7.2"
@@ -27,6 +29,8 @@ thiserror = "2.0.20"
 tokio = { version = "1.53.1", features = ["fs", "macros", "rt-multi-thread", "sync", "time"] }
 tracing = "0.1.44"
 uuid = { version = "1.26.0", features = ["v4", "serde"] }
+walkdir = "2.5.0"
+zip = { version = "8.4.0", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
 tempfile = "3.27.0"
