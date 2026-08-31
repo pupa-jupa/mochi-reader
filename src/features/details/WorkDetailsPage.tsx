@@ -3,6 +3,7 @@ import {
   BookOpen,
   FileText,
   FolderHeart,
+  Globe2,
   HardDrive,
   Heart,
   Image as ImageIcon,
@@ -24,6 +25,10 @@ function readableSize(bytes: number) {
   if (bytes < 1024) return `${bytes} Б`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} КБ`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+}
+
+function formatLabel(format: WorkDetails['format']) {
+  return format === 'remote_manga' ? 'ONLINE' : format.toUpperCase();
 }
 
 interface WorkDetailsPageProps {
@@ -83,7 +88,11 @@ export function WorkDetailsPage({ bridge = desktopBridge }: WorkDetailsPageProps
   }, [bridge, id]);
 
   async function remove() {
-    if (!work || !window.confirm(`Убрать «${work.title}» из библиотеки? Исходный файл останется на месте.`)) return;
+    if (!work) return;
+    const explanation = work.originKind === 'remote'
+      ? 'Онлайн-источник и его данные не изменятся.'
+      : 'Исходный файл останется на месте.';
+    if (!window.confirm(`Убрать «${work.title}» из библиотеки? ${explanation}`)) return;
     await bridge.removeFromLibrary(work.id);
     navigate('/library');
   }
@@ -155,7 +164,7 @@ export function WorkDetailsPage({ bridge = desktopBridge }: WorkDetailsPageProps
   }
 
   async function relinkSource() {
-    if (!work || relinking) return;
+    if (!work || work.originKind === 'remote' || relinking) return;
     setRelinking(true);
     setError(null);
     try {
@@ -180,21 +189,25 @@ export function WorkDetailsPage({ bridge = desktopBridge }: WorkDetailsPageProps
     return <div aria-label="Загрузка карточки" className="page detail-skeleton" />;
   }
 
+  const isRemote = work.originKind === 'remote';
+  const visibleFormat = formatLabel(work.format);
+
   return (
     <div className="page details-page">
       <Link className="back-link" to="/library"><ArrowLeft aria-hidden="true" /> Назад в библиотеку</Link>
       <div className="details-layout">
-        <div className={`details-cover details-cover--${work.kind}`}>
-          <span>{work.format.toUpperCase()}</span>
+        <div className={`details-cover details-cover--${work.kind}${isRemote ? ' details-cover--remote' : ''}`}>
+          {isRemote && work.remoteCoverUrl ? <img alt="" src={work.remoteCoverUrl} /> : null}
+          <span>{visibleFormat}</span>
           {work.kind === 'manga' ? <ImageIcon aria-hidden="true" /> : <BookOpen aria-hidden="true" />}
           <strong>{work.title}</strong>
         </div>
         <section className="details-copy">
-          <p className="eyebrow">{work.kind === 'manga' ? 'Манга' : 'Книга'} · {work.format.toUpperCase()}</p>
+          <p className="eyebrow">{work.kind === 'manga' ? 'Манга' : 'Книга'} · {visibleFormat}</p>
           <h1>{work.title}</h1>
           <p className="details-author">{work.author || 'Автор не указан'}</p>
           <p className="details-description">{work.description || 'Описание пока не добавлено. Можно сразу открыть произведение и начать чтение.'}</p>
-          {work.missingFile ? (
+          {!isRemote && work.missingFile ? (
             <div className="missing-source" role="alert">
               <div>
                 <strong>Исходный файл не найден</strong>
@@ -206,7 +219,7 @@ export function WorkDetailsPage({ bridge = desktopBridge }: WorkDetailsPageProps
             </div>
           ) : null}
           <div className="details-actions">
-            {work.missingFile ? null : <Link className="button button--primary" to={`/read/${work.id}`}><BookOpen aria-hidden="true" /> Читать</Link>}
+            {!isRemote && work.missingFile ? null : <Link className="button button--primary" to={`/read/${work.id}`}><BookOpen aria-hidden="true" /> Читать</Link>}
             <Button aria-label={work.favorite ? 'Убрать из избранного' : 'Добавить в избранное'} onClick={() => void toggleFavorite()} variant="secondary"><Heart aria-hidden="true" fill={work.favorite ? 'currentColor' : 'none'} /> {work.favorite ? 'В избранном' : 'В избранное'}</Button>
             <Button aria-label="Редактировать информацию" onClick={() => setEditing(true)} variant="ghost"><Pencil aria-hidden="true" /> Изменить</Button>
             <Button onClick={() => void remove()} variant="ghost"><Trash2 aria-hidden="true" /> Убрать</Button>
@@ -242,10 +255,14 @@ export function WorkDetailsPage({ bridge = desktopBridge }: WorkDetailsPageProps
             </form>
           ) : null}
           <dl className="details-facts">
-            <div><dt><FileText aria-hidden="true" /> Формат</dt><dd>{work.format.toUpperCase()}</dd></div>
-            <div><dt><HardDrive aria-hidden="true" /> Размер</dt><dd>{readableSize(work.fileSize)}</dd></div>
+            <div><dt><FileText aria-hidden="true" /> Формат</dt><dd>{visibleFormat}</dd></div>
+            {isRemote ? null : <div><dt><HardDrive aria-hidden="true" /> Размер</dt><dd>{readableSize(work.fileSize)}</dd></div>}
             <div><dt>Статус</dt><dd><select aria-label="Статус чтения" onChange={(event) => void updateStatus(event.target.value as WorkStatus)} value={work.status}><option value="planned">В планах</option><option value="reading">Читаю</option><option value="completed">Прочитано</option><option value="on_hold">Отложено</option></select></dd></div>
-            <div><dt>Источник</dt><dd className="details-source"><span title={work.sourcePath}>{work.sourcePath}</span><Button aria-label="Изменить расположение" disabled={relinking} onClick={() => void relinkSource()} variant="ghost"><Link2 aria-hidden="true" /></Button></dd></div>
+            {isRemote ? (
+              <div><dt><Globe2 aria-hidden="true" /> Источник</dt><dd className="details-source"><span>Онлайн-каталог</span><small title={work.remoteUrl ?? undefined}>{work.remoteUrl}</small></dd></div>
+            ) : (
+              <div><dt>Источник</dt><dd className="details-source"><span title={work.sourcePath}>{work.sourcePath}</span><Button aria-label="Изменить расположение" disabled={relinking} onClick={() => void relinkSource()} variant="ghost"><Link2 aria-hidden="true" /></Button></dd></div>
+            )}
           </dl>
           <div className="details-collection">
             <div><FolderHeart aria-hidden="true" /><span><strong>Добавить в коллекцию</strong><small>Одна книга может быть в нескольких подборках.</small></span></div>

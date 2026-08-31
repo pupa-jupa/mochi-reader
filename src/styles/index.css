@@ -462,6 +462,7 @@ kbd { padding: 0.16rem 0.38rem; color: var(--ink-faint); background: var(--surfa
 .remote-manga-cover > svg { position: absolute; top: 24px; right: 24px; width: 1.2rem; opacity: 0.6; }
 .remote-manga-cover strong { position: relative; z-index: 1; font-family: var(--font-display); font-size: 2.6rem; }
 .remote-manga-cover span { position: relative; z-index: 1; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.remote-manga-cover > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .remote-manga-copy { max-width: 650px; }
 .remote-manga-copy .eyebrow { display: flex; align-items: center; gap: 0.35rem; }
 .remote-manga-copy .eyebrow svg { width: 0.95rem; }
@@ -470,6 +471,7 @@ kbd { padding: 0.16rem 0.38rem; color: var(--ink-faint); background: var(--surfa
 .remote-manga-badges span { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.6rem; color: var(--ink-soft); background: var(--surface-muted); border-radius: var(--radius-round); font-size: 0.66rem; }
 .remote-manga-badges svg { width: 0.85rem; color: var(--success); }
 .remote-manga-summary { max-width: 62ch; margin: 1.1rem 0 0; color: var(--ink-soft); line-height: 1.7; }
+.remote-manga-library { margin-top: 1rem; }
 .remote-chapters { margin-top: 1.2rem; padding: clamp(1rem, 3vw, 1.6rem); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); }
 .remote-chapters__heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 0.9rem; }
 .remote-chapters__heading p, .remote-chapters__heading h2 { margin: 0; }
@@ -544,9 +546,12 @@ input[type='range'] { accent-color: var(--accent); }
 .details-layout { display: grid; align-items: start; gap: clamp(2rem, 5vw, 4.5rem); grid-template-columns: minmax(210px, 315px) minmax(0, 1fr); }
 .details-cover { position: sticky; top: 1.5rem; display: flex; aspect-ratio: 0.69; flex-direction: column; justify-content: flex-end; padding: 1.6rem; color: #fffaf6; background: var(--cover-book); border-radius: 13px 25px 25px 13px; box-shadow: 0 25px 55px rgb(66 31 42 / 23%), inset 7px 0 rgb(255 255 255 / 12%); }
 .details-cover--manga { background: var(--cover-manga); }
+.details-cover--remote { overflow: hidden; }
+.details-cover--remote::after { position: absolute; z-index: 1; inset: 0; background: linear-gradient(180deg, transparent 35%, rgb(20 12 18 / 82%)); content: ''; }
+.details-cover--remote > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .details-cover > svg { position: absolute; top: 42%; left: 50%; width: 5rem; height: 5rem; opacity: 0.16; transform: translate(-50%, -50%); }
-.details-cover span { position: absolute; top: 1rem; right: 1rem; padding: 0.3rem 0.5rem; background: rgb(0 0 0 / 12%); border-radius: 7px; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.08em; }
-.details-cover strong { font-family: var(--font-display); font-size: 1.65rem; font-weight: 600; line-height: 1.2; }
+.details-cover span { position: absolute; z-index: 2; top: 1rem; right: 1rem; padding: 0.3rem 0.5rem; background: rgb(0 0 0 / 12%); border-radius: 7px; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.08em; }
+.details-cover strong { position: relative; z-index: 2; font-family: var(--font-display); font-size: 1.65rem; font-weight: 600; line-height: 1.2; }
 .details-copy { padding-top: 1rem; }
 .details-copy h1 { max-width: 16ch; }
 .details-author { color: var(--accent); font-weight: 650; }
@@ -573,6 +578,7 @@ input[type='range'] { accent-color: var(--accent); }
 .details-facts dd { margin: 0; overflow: hidden; color: var(--ink-soft); font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
 .details-source { display: flex; min-width: 0; align-items: center; gap: 0.5rem; }
 .details-source span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.details-source small { min-width: 0; overflow: hidden; color: var(--ink-faint); text-overflow: ellipsis; }
 .details-source .button { width: 34px; min-height: 34px; flex: 0 0 auto; padding: 0; }
 .details-facts select, .details-collection select { min-height: 36px; padding: 0 2rem 0 0.65rem; color: var(--ink); background: var(--bg-soft); border: 1px solid var(--border); border-radius: 9px; }
 .details-collection { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; margin-top: 1.2rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); }

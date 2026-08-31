@@ -11,6 +11,8 @@ function bridgeFixture(): DesktopBridge {
   return {
     listWorks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     getWork: vi.fn(),
+    addRemoteWorkToLibrary: vi.fn(),
+    findRemoteWork: vi.fn(),
     importPaths: vi.fn(),
     removeFromLibrary: vi.fn(),
     setFavorite: vi.fn(),

@@ -111,4 +111,71 @@ describe('remote manga details page', () => {
     );
     expect(await screen.findByText('12 страниц сохранено для офлайн-чтения.')).toBeVisible();
   });
+
+  it('adds remote manga to Library without downloading and reuses its work id', async () => {
+    const bridge = {
+      listSources: vi.fn().mockResolvedValue([
+        {
+          id: 'mangadex',
+          name: 'MangaDex',
+          baseUrl: 'https://api.mangadex.org',
+          adapterKind: 'mangadex',
+          enabled: true,
+          capabilities: { search: true, download: false },
+          createdAt: '2026-08-31T00:00:00Z',
+          updatedAt: '2026-08-31T00:00:00Z',
+        },
+      ]),
+      getSourceChapters: vi.fn().mockResolvedValue([
+        {
+          remoteId: 'chapter-1',
+          title: 'Глава 1',
+          url: 'https://mangadex.org/chapter/chapter-1',
+          attribution: null,
+        },
+      ]),
+      findRemoteWork: vi.fn().mockResolvedValue(null),
+      addRemoteWorkToLibrary: vi.fn().mockResolvedValue('remote-work-1'),
+    } as unknown as DesktopBridge;
+    const parameters = new URLSearchParams({
+      remoteId: 'moon',
+      url: 'https://mangadex.org/title/moon',
+      title: 'Лунные письма',
+      summary: 'Тихая история.',
+      coverUrl: 'https://uploads.mangadex.org/covers/moon/cover.jpg.256.jpg',
+    });
+
+    render(
+      <MemoryRouter initialEntries={[`/sources/mangadex/manga?${parameters.toString()}`]}>
+        <Routes>
+          <Route
+            element={<RemoteMangaDetailsPage bridge={bridge} />}
+            path="/sources/:sourceId/manga"
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const addButton = await screen.findByRole('button', { name: 'Добавить в библиотеку' });
+    await waitFor(() => expect(addButton).toBeEnabled());
+    fireEvent.click(addButton);
+
+    await waitFor(() => {
+      expect(bridge.addRemoteWorkToLibrary).toHaveBeenCalledWith({
+        sourceId: 'mangadex',
+        remoteId: 'moon',
+        title: 'Лунные письма',
+        description: 'Тихая история.',
+        remoteUrl: 'https://mangadex.org/title/moon',
+        coverUrl: 'https://uploads.mangadex.org/covers/moon/cover.jpg.256.jpg',
+        chapterCount: 1,
+      });
+    });
+    expect(screen.getByRole('button', { name: 'В библиотеке' })).toBeDisabled();
+    expect(screen.getByRole('link', { name: 'Читать Глава 1' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('workId=remote-work-1'),
+    );
+    expect(screen.queryByRole('button', { name: /Скачать/ })).not.toBeInTheDocument();
+  });
 });

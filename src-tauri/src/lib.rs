@@ -79,6 +79,8 @@ pub fn run() {
             commands::import::import_paths,
             commands::library::list_works,
             commands::library::get_work,
+            commands::library::add_remote_work_to_library,
+            commands::library::find_remote_work,
             commands::library::remove_from_library,
             commands::library::set_favorite,
             commands::library::set_work_status,

@@ -24,6 +24,16 @@ export interface RemoteMangaSummary {
   summary: string | null;
 }
 
+export interface RemoteWorkDraft {
+  sourceId: string;
+  remoteId: string;
+  title: string;
+  description: string | null;
+  remoteUrl: string;
+  coverUrl: string | null;
+  chapterCount: number;
+}
+
 export interface RemoteSearchPage {
   items: RemoteMangaSummary[];
   hasNextPage: boolean;

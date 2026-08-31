@@ -1,13 +1,14 @@
 use std::path::Path;
 
 use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter, types::Value};
+use url::Url;
 use uuid::Uuid;
 
 use crate::domain::{
     error::{AppError, AppResult},
     work::{
-        NewWork, WorkDetails, WorkFormat, WorkKind, WorkListQuery, WorkPage, WorkSort, WorkStatus,
-        WorkSummary,
+        NewWork, RemoteWorkDraft, WorkDetails, WorkFormat, WorkKind, WorkListQuery, WorkOrigin,
+        WorkPage, WorkSort, WorkStatus, WorkSummary,
     },
 };
 
@@ -68,6 +69,98 @@ impl<'connection> WorkRepository<'connection> {
         Ok(id)
     }
 
+    pub fn upsert_remote(&self, draft: &RemoteWorkDraft) -> AppResult<String> {
+        let source_id = validated_identifier(&draft.source_id, "Источник")?;
+        let remote_id = validated_identifier(&draft.remote_id, "Идентификатор произведения")?;
+        let title = draft.title.trim();
+        if title.is_empty() || title.chars().count() > 300 {
+            return Err(AppError::Validation {
+                message: "Название должно содержать от 1 до 300 символов.".to_string(),
+            });
+        }
+        let description = normalize_optional(draft.description.as_deref(), 20_000, "Описание")?;
+        let remote_url = validated_https_url(&draft.remote_url, "Ссылка на произведение")?;
+        let cover_url = draft
+            .cover_url
+            .as_deref()
+            .map(|value| validated_https_url(value, "Ссылка на обложку"))
+            .transpose()?;
+        let source_exists = self.connection.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sources WHERE id = ?1)",
+            [source_id],
+            |row| row.get::<_, i64>(0),
+        )? != 0;
+        if !source_exists {
+            return Err(AppError::NotFound { entity: "source" });
+        }
+        let content_identity = format!("remote:{source_id}:{remote_id}");
+        let existing_id = self
+            .connection
+            .query_row(
+                "SELECT id FROM works WHERE content_identity = ?1",
+                [&content_identity],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()?;
+        let id = existing_id.unwrap_or_else(|| Uuid::new_v4().to_string());
+        let now = chrono::Utc::now().to_rfc3339();
+        let transaction = self.connection.unchecked_transaction()?;
+        transaction.execute(
+            "INSERT INTO works (
+                id, title, description, kind, format, source_path, file_size, fingerprint,
+                chapter_count, added_at, updated_at, content_identity, origin_kind,
+                source_id, remote_id, remote_url, remote_cover_url
+             ) VALUES (
+                ?1, ?2, ?3, 'manga', 'remote_manga', ?4, 0, ?5,
+                ?6, ?7, ?7, ?5, 'remote', ?8, ?9, ?4, ?10
+             )
+             ON CONFLICT(content_identity) DO UPDATE SET
+                title = excluded.title,
+                description = COALESCE(excluded.description, works.description),
+                format = excluded.format,
+                source_path = excluded.source_path,
+                chapter_count = MAX(works.chapter_count, excluded.chapter_count),
+                updated_at = excluded.updated_at,
+                origin_kind = excluded.origin_kind,
+                source_id = excluded.source_id,
+                remote_id = excluded.remote_id,
+                remote_url = excluded.remote_url,
+                remote_cover_url = COALESCE(excluded.remote_cover_url, works.remote_cover_url),
+                missing_file = 0",
+            params![
+                id,
+                title,
+                description,
+                remote_url,
+                content_identity,
+                i64::from(draft.chapter_count),
+                now,
+                source_id,
+                remote_id,
+                cover_url,
+            ],
+        )?;
+        transaction.execute("DELETE FROM work_fts WHERE work_id = ?1", [&id])?;
+        transaction.execute(
+            "INSERT INTO work_fts(work_id, title, author) VALUES (?1, ?2, NULL)",
+            params![id, title],
+        )?;
+        transaction.commit()?;
+        Ok(id)
+    }
+
+    pub fn find_remote_id(&self, source_id: &str, remote_id: &str) -> AppResult<Option<String>> {
+        self.connection
+            .query_row(
+                "SELECT id FROM works
+                 WHERE origin_kind = 'remote' AND source_id = ?1 AND remote_id = ?2",
+                params![source_id, remote_id],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
     pub fn get(&self, id: &str) -> AppResult<WorkDetails> {
         let mut work = self
             .connection
@@ -76,7 +169,8 @@ impl<'connection> WorkRepository<'connection> {
                     id, title, author, kind, format, cover_path, status, favorite,
                     missing_file, added_at, last_opened_at, original_title, description,
                     source_path, file_size, page_count, chapter_count,
-                    COALESCE(reading_progress.percent * 100.0, 0.0)
+                    COALESCE(reading_progress.percent * 100.0, 0.0),
+                    origin_kind, source_id, remote_id, remote_url, remote_cover_url
                  FROM works
                  LEFT JOIN reading_progress ON reading_progress.work_id = works.id
                  WHERE id = ?1",
@@ -85,7 +179,8 @@ impl<'connection> WorkRepository<'connection> {
             )
             .optional()?
             .ok_or(AppError::NotFound { entity: "work" })?;
-        work.summary.missing_file = !Path::new(&work.source_path).exists();
+        work.summary.missing_file =
+            work.origin_kind == WorkOrigin::Local && !Path::new(&work.source_path).exists();
         Ok(work)
     }
 
@@ -377,7 +472,19 @@ fn map_work_details(row: &Row<'_>) -> rusqlite::Result<WorkDetails> {
         file_size: row.get::<_, i64>(14)? as u64,
         page_count: row.get(15)?,
         chapter_count: row.get(16)?,
+        origin_kind: parse_origin(row.get::<_, String>(18)?.as_str()),
+        source_id: row.get(19)?,
+        remote_id: row.get(20)?,
+        remote_url: row.get(21)?,
+        remote_cover_url: row.get(22)?,
     })
+}
+
+fn parse_origin(value: &str) -> WorkOrigin {
+    match value {
+        "remote" => WorkOrigin::Remote,
+        _ => WorkOrigin::Local,
+    }
 }
 
 fn parse_kind(value: &str) -> WorkKind {
@@ -408,6 +515,35 @@ fn parse_format(value: &str) -> WorkFormat {
         "zip_images" => WorkFormat::ZipImages,
         "image_folder" => WorkFormat::ImageFolder,
         "image" => WorkFormat::Image,
+        "remote_manga" => WorkFormat::RemoteManga,
         _ => WorkFormat::Epub,
     }
+}
+
+fn validated_identifier<'value>(value: &'value str, field: &str) -> AppResult<&'value str> {
+    let value = value.trim();
+    if value.is_empty() || value.chars().count() > 1_024 {
+        return Err(AppError::Validation {
+            message: format!("{field} имеет неверный формат."),
+        });
+    }
+    Ok(value)
+}
+
+fn validated_https_url<'value>(value: &'value str, field: &str) -> AppResult<&'value str> {
+    let value = value.trim();
+    let url = Url::parse(value).map_err(|_| AppError::Validation {
+        message: format!("{field} имеет неверный формат."),
+    })?;
+    if value.chars().count() > 4_096
+        || url.scheme() != "https"
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.host_str().is_none()
+    {
+        return Err(AppError::Validation {
+            message: format!("{field} имеет неверный формат."),
+        });
+    }
+    Ok(value)
 }

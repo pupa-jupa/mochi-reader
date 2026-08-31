@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Download, Globe2, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Download, Globe2, Library, ShieldCheck, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
@@ -18,25 +18,33 @@ export function RemoteMangaDetailsPage({ bridge }: RemoteMangaDetailsPageProps) 
   const mangaUrl = parameters.get('url') ?? '';
   const title = parameters.get('title') ?? 'Онлайн-манга';
   const summary = parameters.get('summary');
+  const coverUrl = parameters.get('coverUrl');
   const invalidLink = !sourceId || !remoteId || !mangaUrl;
   const [chapters, setChapters] = useState<RemoteChapter[]>([]);
   const [downloadAllowed, setDownloadAllowed] = useState(false);
   const [isMangaDex, setIsMangaDex] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [downloadMessage, setDownloadMessage] = useState<string | null>(null);
+  const [libraryWorkId, setLibraryWorkId] = useState<string | null>(null);
+  const [addingToLibrary, setAddingToLibrary] = useState(false);
   const [loading, setLoading] = useState(shouldLoad && !invalidLink);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!shouldLoad || invalidLink) return;
     let active = true;
+    const existingWork = typeof api.findRemoteWork === 'function'
+      ? api.findRemoteWork(sourceId, remoteId).catch(() => null)
+      : Promise.resolve(null);
     void Promise.all([
       api.getSourceChapters(sourceId, remoteId, mangaUrl),
       api.listSources().catch(() => []),
+      existingWork,
     ])
-      .then(([items, sources]) => {
+      .then(([items, sources, workId]) => {
         if (!active) return;
         setChapters(items);
+        setLibraryWorkId(workId);
         const selectedSource = sources.find((source) => source.id === sourceId);
         setDownloadAllowed(Boolean(selectedSource?.capabilities.download));
         setIsMangaDex(selectedSource?.adapterKind === 'mangadex');
@@ -65,6 +73,27 @@ export function RemoteMangaDetailsPage({ bridge }: RemoteMangaDetailsPageProps) 
     }
   }
 
+  async function addToLibrary() {
+    setAddingToLibrary(true);
+    setError(null);
+    try {
+      const workId = await api.addRemoteWorkToLibrary({
+        sourceId,
+        remoteId,
+        title,
+        description: summary,
+        remoteUrl: mangaUrl,
+        coverUrl,
+        chapterCount: chapters.length,
+      });
+      setLibraryWorkId(workId);
+    } catch (reason) {
+      setError(sourceLibraryError(reason));
+    } finally {
+      setAddingToLibrary(false);
+    }
+  }
+
   return (
     <div className="page remote-manga-page">
       <Link className="back-link" to={`/sources/${sourceId}`}>
@@ -72,9 +101,13 @@ export function RemoteMangaDetailsPage({ bridge }: RemoteMangaDetailsPageProps) 
       </Link>
       <section className="remote-manga-hero">
         <div aria-hidden="true" className="remote-manga-cover">
-          <Sparkles />
-          <strong>{initials(title)}</strong>
-          <span>Mochi online</span>
+          {coverUrl ? <img alt="" src={coverUrl} /> : (
+            <>
+              <Sparkles />
+              <strong>{initials(title)}</strong>
+              <span>Mochi online</span>
+            </>
+          )}
         </div>
         <div className="remote-manga-copy">
           <p className="eyebrow"><Globe2 aria-hidden="true" /> Онлайн-произведение</p>
@@ -89,6 +122,16 @@ export function RemoteMangaDetailsPage({ bridge }: RemoteMangaDetailsPageProps) 
           <p className="remote-manga-summary">
             {summary || 'Описание не предоставлено источником. Можно сразу выбрать главу и начать чтение.'}
           </p>
+          <button
+            aria-label={libraryWorkId ? 'В библиотеке' : 'Добавить в библиотеку'}
+            className="button button--primary remote-manga-library"
+            disabled={loading || addingToLibrary || libraryWorkId !== null}
+            onClick={() => void addToLibrary()}
+            type="button"
+          >
+            {libraryWorkId ? <CheckCircle2 aria-hidden="true" /> : <Library aria-hidden="true" />}
+            {addingToLibrary ? 'Добавляем…' : libraryWorkId ? 'В библиотеке' : 'Добавить в библиотеку'}
+          </button>
         </div>
       </section>
 
@@ -107,7 +150,10 @@ export function RemoteMangaDetailsPage({ bridge }: RemoteMangaDetailsPageProps) 
           <ol className="remote-chapter-list">
             {chapters.map((chapter, index) => (
               <li key={`${chapter.remoteId}:${chapter.url}`}>
-                <Link aria-label={`Читать ${chapter.title}`} to={readerUrl(sourceId, chapter, title, remoteId, mangaUrl)}>
+                <Link
+                  aria-label={`Читать ${chapter.title}`}
+                  to={readerUrl(sourceId, chapter, title, remoteId, mangaUrl, summary, coverUrl, libraryWorkId)}
+                >
                   <span className="remote-chapter-list__index">{String(index + 1).padStart(2, '0')}</span>
                   <span>
                     <strong>{chapter.title}</strong>
@@ -145,6 +191,9 @@ function readerUrl(
   mangaTitle: string,
   mangaRemoteId: string,
   mangaUrl: string,
+  summary: string | null,
+  coverUrl: string | null,
+  workId: string | null,
 ) {
   const parameters = new URLSearchParams({
     chapterId: chapter.remoteId,
@@ -154,6 +203,9 @@ function readerUrl(
     mangaRemoteId,
     mangaUrl,
   });
+  if (summary) parameters.set('summary', summary);
+  if (coverUrl) parameters.set('coverUrl', coverUrl);
+  if (workId) parameters.set('workId', workId);
   return `/sources/${encodeURIComponent(sourceId)}/read?${parameters.toString()}`;
 }
 
@@ -178,6 +230,13 @@ function sourceDownloadError(reason: unknown) {
     return String(reason.userMessage);
   }
   return 'Не удалось сохранить главу для офлайн-чтения.';
+}
+
+function sourceLibraryError(reason: unknown) {
+  if (typeof reason === 'object' && reason !== null && 'userMessage' in reason) {
+    return String(reason.userMessage);
+  }
+  return 'Не удалось добавить мангу в библиотеку.';
 }
 
 function chapterWord(value: number) {

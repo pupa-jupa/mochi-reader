@@ -7,7 +7,10 @@ use crate::{
     database::work_repository::WorkRepository,
     domain::{
         error::{AppError, AppResult},
-        work::{WorkDetails, WorkFormat, WorkKind, WorkListQuery, WorkPage, WorkSort, WorkStatus},
+        work::{
+            RemoteWorkDraft, WorkDetails, WorkFormat, WorkKind, WorkListQuery, WorkOrigin,
+            WorkPage, WorkSort, WorkStatus,
+        },
     },
     import::detect::{DetectedFormat, detect_format},
 };
@@ -60,6 +63,29 @@ pub fn get_work(state: State<'_, AppState>, id: String) -> AppResult<WorkDetails
 }
 
 #[tauri::command]
+pub fn add_remote_work_to_library(
+    state: State<'_, AppState>,
+    draft: RemoteWorkDraft,
+) -> AppResult<String> {
+    let connection = state.database.lock().map_err(|_| AppError::Validation {
+        message: "Библиотека временно недоступна.".to_string(),
+    })?;
+    WorkRepository::new(&connection).upsert_remote(&draft)
+}
+
+#[tauri::command]
+pub fn find_remote_work(
+    state: State<'_, AppState>,
+    source_id: String,
+    remote_id: String,
+) -> AppResult<Option<String>> {
+    let connection = state.database.lock().map_err(|_| AppError::Validation {
+        message: "Библиотека временно недоступна.".to_string(),
+    })?;
+    WorkRepository::new(&connection).find_remote_id(&source_id, &remote_id)
+}
+
+#[tauri::command]
 pub fn remove_from_library(state: State<'_, AppState>, id: String) -> AppResult<()> {
     let connection = state.database.lock().map_err(|_| AppError::Validation {
         message: "Библиотека временно недоступна.".to_string(),
@@ -93,6 +119,11 @@ pub fn reveal_work_source(app: AppHandle, state: State<'_, AppState>, id: String
         message: "Библиотека временно недоступна.".to_string(),
     })?;
     let work = WorkRepository::new(&connection).get(&id)?;
+    if work.origin_kind == WorkOrigin::Remote {
+        return Err(AppError::Validation {
+            message: "Онлайн-произведение не связано с локальным файлом.".to_string(),
+        });
+    }
     let path = std::path::Path::new(&work.source_path);
     if !path.exists() {
         return Err(AppError::Validation {
@@ -150,6 +181,11 @@ pub fn relink_work_source(
     })?;
     let repository = WorkRepository::new(&connection);
     let work = repository.get(&id)?;
+    if work.origin_kind == WorkOrigin::Remote {
+        return Err(AppError::Validation {
+            message: "Для онлайн-произведения не нужно выбирать локальный файл.".to_string(),
+        });
+    }
     let detected = detect_format(&path)?;
     if !compatible_format(&work.format, detected) {
         return Err(AppError::Validation {

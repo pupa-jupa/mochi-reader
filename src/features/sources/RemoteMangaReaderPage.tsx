@@ -5,6 +5,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { desktopBridge, isDesktopRuntime, type DesktopBridge } from '../../app/bridge';
 import { MangaReader } from '../manga-reader/MangaReaderPage';
 import type { MangaManifest } from '../../types/manga';
+import type { ReadingProgress } from '../../types/persistence';
 import type { RemotePage } from '../../types/sources';
 
 interface RemoteMangaReaderPageProps {
@@ -22,33 +23,51 @@ export function RemoteMangaReaderPage({ bridge }: RemoteMangaReaderPageProps) {
   const mangaTitle = parameters.get('mangaTitle') ?? 'Онлайн-манга';
   const mangaRemoteId = parameters.get('mangaRemoteId') ?? '';
   const mangaUrl = parameters.get('mangaUrl') ?? '';
-  const invalidLink = !sourceId || !chapterId || !chapterUrl;
+  const summary = parameters.get('summary');
+  const coverUrl = parameters.get('coverUrl');
+  const invalidLink = !sourceId || !chapterId || !chapterUrl || !mangaRemoteId || !mangaUrl;
   const [pages, setPages] = useState<RemotePage[] | null>(null);
+  const [workId, setWorkId] = useState<string | null>(null);
+  const [initialProgress, setInitialProgress] = useState<ReadingProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!shouldLoad || invalidLink) return;
     let active = true;
-    void api
-      .getSourcePages(sourceId, chapterId, chapterUrl)
-      .then((items) => {
+    void Promise.all([
+      api.getSourcePages(sourceId, chapterId, chapterUrl),
+      api.addRemoteWorkToLibrary({
+        sourceId,
+        remoteId: mangaRemoteId,
+        title: mangaTitle,
+        description: summary,
+        remoteUrl: mangaUrl,
+        coverUrl,
+        chapterCount: 0,
+      }),
+    ])
+      .then(async ([items, persistedWorkId]) => {
         if (!active) return;
         if (items.length === 0) {
           setError('Источник не вернул ни одной страницы для этой главы.');
           return;
         }
+        const progress = await api.getProgress(persistedWorkId).catch(() => null);
+        if (!active) return;
+        setWorkId(persistedWorkId);
+        setInitialProgress(progress);
         setPages(items);
       })
       .catch((reason) => active && setError(sourceError(reason)));
     return () => {
       active = false;
     };
-  }, [api, chapterId, chapterUrl, invalidLink, shouldLoad, sourceId]);
+  }, [api, chapterId, chapterUrl, coverUrl, invalidLink, mangaRemoteId, mangaTitle, mangaUrl, shouldLoad, sourceId, summary]);
 
   const manifest = useMemo<MangaManifest | null>(() => {
-    if (!pages) return null;
+    if (!pages || !workId) return null;
     return {
-      workId: `remote:${sourceId}:${stableHash(chapterId)}`,
+      workId,
       title: `${mangaTitle} · ${chapterTitle}`,
       pages: pages.map((page) => ({
         index: page.index,
@@ -56,9 +75,9 @@ export function RemoteMangaReaderPage({ bridge }: RemoteMangaReaderPageProps) {
         mediaType: imageMediaType(page.url),
       })),
     };
-  }, [chapterId, chapterTitle, mangaTitle, pages, sourceId]);
+  }, [chapterTitle, mangaTitle, pages, workId]);
 
-  const backTo = mangaDetailsUrl(sourceId, mangaRemoteId, mangaUrl, mangaTitle);
+  const backTo = mangaDetailsUrl(sourceId, mangaRemoteId, mangaUrl, mangaTitle, summary, coverUrl);
   const visibleError = invalidLink
     ? 'Ссылка на главу неполная. Вернись в каталог и открой её снова.'
     : error;
@@ -77,29 +96,40 @@ export function RemoteMangaReaderPage({ bridge }: RemoteMangaReaderPageProps) {
   return (
     <MangaReader
       backTo={backTo}
+      chapterId={chapterId}
+      createBookmark={api.createBookmark}
+      endReadingSession={api.endReadingSession}
+      initialPageIndex={
+        initialProgress?.locator.kind === 'manga'
+          && initialProgress.locator.chapterId === chapterId
+          ? initialProgress.locator.pageIndex
+          : null
+      }
       loadPage={(index) => {
         const page = pages[index];
         if (!page) return Promise.reject(new Error('Страница вне диапазона главы.'));
         return api.getSourcePage(sourceId, page.url, index);
       }}
       manifest={manifest}
+      saveProgress={api.saveProgress}
+      startReadingSession={api.startReadingSession}
     />
   );
 }
 
-function mangaDetailsUrl(sourceId: string, remoteId: string, mangaUrl: string, title: string) {
+function mangaDetailsUrl(
+  sourceId: string,
+  remoteId: string,
+  mangaUrl: string,
+  title: string,
+  summary: string | null,
+  coverUrl: string | null,
+) {
   if (!remoteId || !mangaUrl) return `/sources/${sourceId}`;
   const parameters = new URLSearchParams({ remoteId, url: mangaUrl, title });
+  if (summary) parameters.set('summary', summary);
+  if (coverUrl) parameters.set('coverUrl', coverUrl);
   return `/sources/${encodeURIComponent(sourceId)}/manga?${parameters.toString()}`;
-}
-
-function stableHash(value: string) {
-  let hash = 2_166_136_261;
-  for (const character of value) {
-    hash ^= character.codePointAt(0) ?? 0;
-    hash = Math.imul(hash, 16_777_619);
-  }
-  return (hash >>> 0).toString(36);
 }
 
 function imageMediaType(url: string) {

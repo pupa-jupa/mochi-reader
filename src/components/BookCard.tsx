@@ -23,6 +23,7 @@ const formatLabels: Record<string, string> = {
   zip_images: 'ZIP',
   image_folder: 'ПАПКА',
   image: 'IMAGE',
+  remote_manga: 'ONLINE',
 };
 
 export function BookCard({ work, onToggleFavorite, onRevealSource, onRemove }: BookCardProps) {
@@ -96,7 +97,7 @@ export function BookCard({ work, onToggleFavorite, onRevealSource, onRemove }: B
           <Link onClick={() => setMenu(null)} role="menuitem" to={`/work/${work.id}`}><FileSearch aria-hidden="true" /> Информация</Link>
           <Link onClick={() => setMenu(null)} role="menuitem" to={`/work/${work.id}?collection=1`}><FolderHeart aria-hidden="true" /> Добавить в коллекцию</Link>
           {onToggleFavorite ? <button onClick={() => { onToggleFavorite(); setMenu(null); }} role="menuitem" type="button"><Heart aria-hidden="true" /> {work.favorite ? 'Убрать из избранного' : 'В избранное'}</button> : null}
-          {onRevealSource ? <button onClick={() => { onRevealSource(); setMenu(null); }} role="menuitem" type="button"><FolderOpen aria-hidden="true" /> Открыть расположение файла</button> : null}
+          {onRevealSource && work.format !== 'remote_manga' ? <button onClick={() => { onRevealSource(); setMenu(null); }} role="menuitem" type="button"><FolderOpen aria-hidden="true" /> Открыть расположение файла</button> : null}
           {onRemove ? <><span className="book-context-menu__separator" /><button className="book-context-menu__danger" onClick={() => { onRemove(); setMenu(null); }} role="menuitem" type="button"><Trash2 aria-hidden="true" /> Убрать из библиотеки</button></> : null}
         </div>
       ) : null}

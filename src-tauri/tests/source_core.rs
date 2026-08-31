@@ -45,7 +45,7 @@ fn mangadex_source_kind_survives_migration_and_upserts_idempotently() {
     assert_eq!(repository.list().unwrap().len(), 1);
     assert_eq!(stored.source.adapter_kind, AdapterKind::Mangadex);
     assert_eq!(stored.source.adapter_kind.as_str(), "mangadex");
-    assert_eq!(version, 6);
+    assert_eq!(version, 7);
 }
 
 #[test]
@@ -192,7 +192,7 @@ fn declarative_html_profiles_cannot_contain_javascript_and_are_persistent() {
             row.get(0)
         })
         .unwrap();
-    assert_eq!(version, 6);
+    assert_eq!(version, 7);
 }
 
 #[test]

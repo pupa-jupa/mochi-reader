@@ -109,6 +109,7 @@ interface MangaReaderProps {
   manifest: MangaManifest;
   loadPage(index: number): Promise<MangaPageData>;
   backTo?: string;
+  chapterId?: string | null;
   initialPageIndex?: number | null;
   saveProgress?(update: ProgressUpdate): Promise<ReadingProgress>;
   createBookmark?(draft: BookmarkDraft): Promise<string>;
@@ -120,6 +121,7 @@ export function MangaReader({
   manifest,
   loadPage,
   backTo = `/work/${manifest.workId}`,
+  chapterId = null,
   initialPageIndex = null,
   saveProgress,
   createBookmark,
@@ -170,7 +172,7 @@ export function MangaReader({
     localStorage.setItem(`mochi-reader:manga-position:${manifest.workId}`, String(value));
     ignorePersistenceFailure(saveProgress?.({
       workId: manifest.workId,
-      locator: { kind: 'manga', chapterId: null, pageIndex: value },
+      locator: { kind: 'manga', chapterId, pageIndex: value },
       percent: manifest.pages.length > 0 ? (value + 1) / manifest.pages.length : 0,
     }));
   }
@@ -182,13 +184,13 @@ export function MangaReader({
     ignorePersistenceFailure(
       startReadingSession(manifest.workId, {
         kind: 'manga',
-        chapterId: null,
+        chapterId,
         pageIndex: indexRef.current,
       }).then((id) => {
         if (active) sessionId = id;
         else ignorePersistenceFailure(endReadingSession?.(id, {
           kind: 'manga',
-          chapterId: null,
+          chapterId,
           pageIndex: indexRef.current,
         }));
       }),
@@ -198,12 +200,12 @@ export function MangaReader({
       if (sessionId) {
         ignorePersistenceFailure(endReadingSession?.(sessionId, {
           kind: 'manga',
-          chapterId: null,
+          chapterId,
           pageIndex: indexRef.current,
         }));
       }
     };
-  }, [endReadingSession, manifest.workId, startReadingSession]);
+  }, [chapterId, endReadingSession, manifest.workId, startReadingSession]);
 
   useEffect(() => {
     if (mode === 'vertical') return;
@@ -240,7 +242,7 @@ export function MangaReader({
   function saveMangaBookmark() {
     ignorePersistenceFailure(createBookmark?.({
       workId: manifest.workId,
-      chapterId: null,
+      chapterId,
       pageIndex: index,
       charOffset: null,
       percent: manifest.pages.length > 0 ? (index + 1) / manifest.pages.length : 0,

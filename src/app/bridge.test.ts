@@ -129,6 +129,29 @@ describe('desktop bridge', () => {
     });
   });
 
+  it('persists and finds a remote work through its source identity', async () => {
+    const invoke = vi.fn().mockResolvedValue('remote-work-1');
+    const bridge = createDesktopBridge(invoke);
+    const draft = {
+      sourceId: 'source-1',
+      remoteId: 'moon',
+      title: 'Moon Panels',
+      description: null,
+      remoteUrl: 'https://panels.example/manga/moon',
+      coverUrl: null,
+      chapterCount: 3,
+    };
+
+    await bridge.addRemoteWorkToLibrary(draft);
+    await bridge.findRemoteWork('source-1', 'moon');
+
+    expect(invoke).toHaveBeenNthCalledWith(1, 'add_remote_work_to_library', { draft });
+    expect(invoke).toHaveBeenNthCalledWith(2, 'find_remote_work', {
+      sourceId: 'source-1',
+      remoteId: 'moon',
+    });
+  });
+
   it('maps remote chapters, pages, and image loading to explicit source commands', async () => {
     const invoke = vi.fn().mockResolvedValue([]);
     const bridge = createDesktopBridge(invoke);

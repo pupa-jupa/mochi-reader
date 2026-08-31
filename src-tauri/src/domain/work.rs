@@ -27,6 +27,22 @@ pub enum WorkStatus {
     OnHold,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkOrigin {
+    Local,
+    Remote,
+}
+
+impl WorkOrigin {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Local => "local",
+            Self::Remote => "remote",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WorkSort {
@@ -87,6 +103,7 @@ pub enum WorkFormat {
     ZipImages,
     ImageFolder,
     Image,
+    RemoteManga,
 }
 
 impl WorkFormat {
@@ -103,8 +120,21 @@ impl WorkFormat {
             Self::ZipImages => "zip_images",
             Self::ImageFolder => "image_folder",
             Self::Image => "image",
+            Self::RemoteManga => "remote_manga",
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteWorkDraft {
+    pub source_id: String,
+    pub remote_id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub remote_url: String,
+    pub cover_url: Option<String>,
+    pub chapter_count: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -149,6 +179,11 @@ pub struct WorkDetails {
     pub file_size: u64,
     pub page_count: Option<u32>,
     pub chapter_count: u32,
+    pub origin_kind: WorkOrigin,
+    pub source_id: Option<String>,
+    pub remote_id: Option<String>,
+    pub remote_url: Option<String>,
+    pub remote_cover_url: Option<String>,
 }
 
 impl std::ops::Deref for WorkDetails {

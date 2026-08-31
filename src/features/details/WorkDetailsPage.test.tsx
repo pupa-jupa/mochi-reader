@@ -72,4 +72,50 @@ describe('work details', () => {
       ),
     );
   });
+
+  it('shows a remote manga as an online library work without local-file actions', async () => {
+    const bridge = {
+      getWork: vi.fn().mockResolvedValue({
+        id: 'remote-work-1',
+        title: 'Moon Panels',
+        author: null,
+        kind: 'manga',
+        format: 'remote_manga',
+        coverPath: null,
+        status: 'reading',
+        favorite: false,
+        progressPercent: 25,
+        missingFile: false,
+        addedAt: '2026-08-31T00:00:00Z',
+        lastOpenedAt: null,
+        originalTitle: null,
+        description: 'A quiet lunar story.',
+        sourcePath: 'https://panels.example/manga/moon',
+        fileSize: 0,
+        pageCount: null,
+        chapterCount: 3,
+        originKind: 'remote',
+        sourceId: 'source-1',
+        remoteId: 'moon',
+        remoteUrl: 'https://panels.example/manga/moon',
+        remoteCoverUrl: 'https://panels.example/covers/moon.jpg',
+      }),
+      listCollections: vi.fn().mockResolvedValue([]),
+    } as unknown as DesktopBridge;
+
+    render(
+      <MemoryRouter initialEntries={['/work/remote-work-1']}>
+        <Routes><Route element={<WorkDetailsPage bridge={bridge} />} path="/work/:id" /></Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Moon Panels' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Читать' })).toHaveAttribute(
+      'href',
+      '/read/remote-work-1',
+    );
+    expect(screen.getByText('Онлайн-каталог')).toBeVisible();
+    expect(screen.queryByText('Размер')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Изменить расположение' })).not.toBeInTheDocument();
+  });
 });

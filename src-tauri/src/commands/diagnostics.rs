@@ -90,7 +90,7 @@ mod tests {
         let diagnostics = build_diagnostic_information(&connection).unwrap();
 
         assert!(diagnostics.contains("Mochi Reader diagnostics"));
-        assert!(diagnostics.contains("Database schema: 6"));
+        assert!(diagnostics.contains("Database schema: 7"));
         assert!(diagnostics.contains("Library works: 0"));
         assert!(!diagnostics.contains("source_path"));
     }

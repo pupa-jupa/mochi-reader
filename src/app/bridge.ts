@@ -27,6 +27,7 @@ import type {
   ChapterDownloadResult,
   RemotePage,
   RemoteSearchPage,
+  RemoteWorkDraft,
   SourceConfig,
 } from '../types/sources';
 
@@ -39,6 +40,8 @@ export function isDesktopRuntime() {
 export interface DesktopBridge {
   listWorks(query: LibraryQuery): Promise<WorkPage>;
   getWork(id: string): Promise<WorkDetails>;
+  addRemoteWorkToLibrary(draft: RemoteWorkDraft): Promise<string>;
+  findRemoteWork(sourceId: string, remoteId: string): Promise<string | null>;
   importPaths(paths: string[]): Promise<ImportBatchResult>;
   removeFromLibrary(id: string): Promise<void>;
   setFavorite(id: string, favorite: boolean): Promise<void>;
@@ -111,6 +114,10 @@ export function createDesktopBridge(invoke: InvokeFunction): DesktopBridge {
   return {
     listWorks: (request) => invoke<WorkPage>('list_works', { request }),
     getWork: (id) => invoke<WorkDetails>('get_work', { id }),
+    addRemoteWorkToLibrary: (draft) =>
+      invoke<string>('add_remote_work_to_library', { draft }),
+    findRemoteWork: (sourceId, remoteId) =>
+      invoke<string | null>('find_remote_work', { sourceId, remoteId }),
     importPaths: (paths) =>
       invoke<ImportBatchResult>('import_paths', {
         request: { paths, options: { copyIntoLibrary: false } },

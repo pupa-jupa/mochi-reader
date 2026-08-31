@@ -1,4 +1,5 @@
 export type WorkKind = 'book' | 'manga';
+export type WorkOrigin = 'local' | 'remote';
 export type WorkStatus = 'reading' | 'planned' | 'completed' | 'on_hold';
 export type WorkFormat =
   | 'epub'
@@ -11,7 +12,8 @@ export type WorkFormat =
   | 'cbr'
   | 'zip_images'
   | 'image_folder'
-  | 'image';
+  | 'image'
+  | 'remote_manga';
 
 export interface WorkSummary {
   id: string;
@@ -35,6 +37,11 @@ export interface WorkDetails extends WorkSummary {
   fileSize: number;
   pageCount: number | null;
   chapterCount: number;
+  originKind: WorkOrigin;
+  sourceId: string | null;
+  remoteId: string | null;
+  remoteUrl: string | null;
+  remoteCoverUrl: string | null;
 }
 
 export interface WorkMetadataUpdate {
