@@ -10,7 +10,7 @@
 - текстовый reader с оглавлением, поиском, закладками, настройками текста и полноэкранным режимом;
 - PDF reader и manga reader с вертикальным, одиночным, двойным, LTR и RTL-режимами;
 - автоматическое сохранение прогресса и история чтения;
-- декларативные онлайн-источники манги, кэш, предзагрузка и разрешённое источником офлайн-сохранение глав;
+- встроенный MangaDex API и декларативные онлайн-источники манги, кэш, предзагрузка и разрешённое источником офлайн-сохранение глав;
 - темы Sakura Pink, Strawberry Milk и Night Sakura, уменьшение анимаций и оригинальный mascot Mochi;
 - локальные ротируемые логи и обезличенная диагностическая сводка.
 
@@ -74,10 +74,13 @@ Windows NSIS installer появляется в `src-tauri/target/release/bundle/
 
 ## Manga sources
 
-Есть два расширяемых адаптера:
+Есть встроенный источник и два расширяемых адаптера:
 
-1. manifest adapter — сайт публикует `/.well-known/mochi-reader.json` и JSON endpoints;
-2. generic HTML adapter — пользователь импортирует декларативный JSON-профиль с CSS selectors.
+1. MangaDex API — подключается одной кнопкой «Подключить MangaDex» на странице «Источники», без аккаунта и API-ключа;
+2. manifest adapter — сайт публикует `/.well-known/mochi-reader.json` и JSON endpoints;
+3. generic HTML adapter — пользователь импортирует декларативный JSON-профиль с CSS selectors.
+
+MangaDex показывает только произведения рейтингов `safe` и `suggestive`, запрашивает русские и английские главы и использует экономичные изображения MangaDex@Home. Постоянная офлайн-загрузка для него отключена; страницы остаются только во временном кэше.
 
 Ни один вариант не выполняет код источника. Подробная схема, ответы endpoints и пример профиля: [docs/manga-source-adapters.md](docs/manga-source-adapters.md) и [examples/sources/generic-example.json](examples/sources/generic-example.json).
 

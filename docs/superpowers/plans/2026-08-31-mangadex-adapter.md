@@ -220,6 +220,7 @@ fn mangadex_pages_use_data_saver_and_reject_unknown_cdn() {
         "https://uploads.mangadex.org/data-saver/chapter-hash/page-01.jpg",
     );
     assert!(parse_pages(&source, &AT_HOME_FIXTURE.replace("uploads.mangadex.org", "evil.example")).is_err());
+    assert!(parse_pages(&source, &AT_HOME_FIXTURE.replace("uploads.mangadex.org", "node.mangadex.network")).is_ok());
 }
 ```
 
@@ -267,7 +268,7 @@ fn localized(values: &HashMap<String, String>) -> Option<String> {
 
 `parse_chapters` excludes entries where `externalUrl` is non-empty and composes title only from present values. Group names come from relationships with `type == "scanlation_group"`; unique names are joined with `, `.
 
-`parse_pages` selects `dataSaver` when config enables it and it is non-empty, otherwise `data`. Reject an empty hash, more than 2 000 filenames, filenames containing `/`, `\\`, `.` or `..` as complete path components, and any base URL outside configured image origins. Build URLs using `Url::path_segments_mut()`.
+`parse_pages` selects `dataSaver` when config enables it and it is non-empty, otherwise `data`. Reject an empty hash, more than 2 000 filenames, filenames containing `/`, `\\`, `.` or `..` as complete path components, and any base URL outside `uploads.mangadex.org` or the exact `mangadex.network` suffix. Build URLs using `Url::path_segments_mut()`.
 
 - [ ] **Step 5: Verify GREEN and update existing adapter constructors**
 
