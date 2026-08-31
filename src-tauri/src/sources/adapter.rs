@@ -194,6 +194,7 @@ pub fn parse_manifest_chapters(
                 remote_id: chapter.id,
                 title: normalize_text(&chapter.title),
                 url: policy.resolve(&chapter.url)?.to_string(),
+                attribution: None,
             })
         })
         .collect()
@@ -255,6 +256,7 @@ pub fn parse_html_chapters(source: &ValidatedSource, html: &str) -> AppResult<Ve
             remote_id: url.clone(),
             title: normalize_text(&title).chars().take(300).collect(),
             url,
+            attribution: None,
         });
     }
     Ok(chapters)

@@ -71,6 +71,7 @@ pub struct RemoteChapter {
     pub remote_id: String,
     pub title: String,
     pub url: String,
+    pub attribution: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
