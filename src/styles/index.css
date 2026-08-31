@@ -1163,6 +1163,7 @@ input[type='range'] { accent-color: var(--accent); }
 .pdf-back { display: inline-flex; align-items: center; gap: 0.45rem; color: #d7cdd0; font-size: 0.78rem; }
 .pdf-back svg { width: 1rem; height: 1rem; }
 .pdf-reader {
+  position: relative;
   display: grid;
   height: 100vh;
   overflow: hidden;
@@ -1203,7 +1204,116 @@ input[type='range'] { accent-color: var(--accent); }
 .pdf-toolbar__spacer { flex: 1; }
 .pdf-zoom span { min-width: 42px; text-align: center; }
 .pdf-viewport { position: relative; display: grid; place-items: start center; padding: 1.5rem; overflow: auto; }
-.pdf-viewport canvas { display: block; background: #fff; box-shadow: 0 18px 52px rgb(0 0 0 / 34%); }
+.pdf-page { position: relative; flex: none; overflow: hidden; background: #fff; box-shadow: 0 18px 52px rgb(0 0 0 / 34%); }
+.pdf-page > canvas { display: block; width: 100%; height: 100%; background: #fff; }
+.pdf-text-layer {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: clip;
+  color-scheme: only light;
+  line-height: 1;
+  text-align: initial;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+.pdf-text-layer :is(span, br) {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+  user-select: text;
+}
+.pdf-text-layer > :not(.markedContent),
+.pdf-text-layer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  font-size: calc(var(--text-scale-factor) * var(--font-height, 0));
+  transform: rotate(var(--rotate, 0deg)) scaleX(var(--scale-x, 1)) scale(var(--min-font-size-inv));
+}
+.pdf-text-layer .markedContent { display: contents; }
+.pdf-text-layer span[role='img'] { cursor: default; user-select: none; }
+.pdf-text-layer ::selection { color: transparent; background: rgb(229 133 156 / 32%); }
+.pdf-text-layer .endOfContent {
+  position: absolute;
+  z-index: 0;
+  display: block;
+  inset: 100% 0 0;
+  cursor: default;
+  user-select: none;
+}
+.pdf-thumbnails,
+.pdf-search-panel {
+  position: absolute;
+  z-index: 8;
+  top: 58px;
+  bottom: 0;
+  overflow: auto;
+  background: rgb(38 35 39 / 96%);
+  border-color: #4c454c;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 32%);
+  backdrop-filter: blur(14px);
+}
+.pdf-thumbnails { left: 0; width: 196px; padding: 0.85rem; border-right: 1px solid; }
+.pdf-thumbnails > div:first-child,
+.pdf-panel-heading { display: flex; align-items: center; justify-content: space-between; min-height: 36px; }
+.pdf-thumbnails > div:first-child strong,
+.pdf-panel-heading strong { color: #fff7fa; font-family: Georgia, serif; font-size: 0.9rem; font-weight: 500; }
+.pdf-thumbnails > div:first-child button,
+.pdf-panel-heading button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: #bbb0b5;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  place-items: center;
+}
+.pdf-thumbnails > div:first-child button:hover,
+.pdf-panel-heading button:hover { color: #fff7fa; background: #484147; }
+.pdf-thumbnails > div:first-child svg,
+.pdf-panel-heading svg { width: 1rem; height: 1rem; }
+.pdf-thumbnails > div:last-child { display: grid; gap: 0.7rem; padding-top: 0.75rem; }
+.pdf-thumbnails > div:last-child > button {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+  padding: 0.55rem;
+  color: #bcb1b6;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 0.67rem;
+}
+.pdf-thumbnails > div:last-child > button:hover { color: #fff7fa; background: #393439; }
+.pdf-thumbnails > div:last-child > button[aria-current='page'] { color: #ffdbe3; background: #49383f; border-color: #84515f; }
+.pdf-thumbnail { display: grid; width: 112px; min-height: 150px; overflow: hidden; background: #fff; box-shadow: 0 8px 20px rgb(0 0 0 / 28%); place-items: center; }
+.pdf-thumbnail canvas { display: block; max-width: 112px; background: #fff; }
+.pdf-search-panel { right: 0; width: min(360px, calc(100vw - 2rem)); padding: 0.85rem; border-left: 1px solid; }
+.pdf-search-panel form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.45rem; margin-top: 0.75rem; }
+.pdf-search-panel form label { display: flex; align-items: center; gap: 0.4rem; padding: 0 0.55rem; background: #201e21; border: 1px solid #504950; border-radius: 8px; }
+.pdf-search-panel form label:focus-within { border-color: #d67d93; box-shadow: 0 0 0 2px rgb(214 125 147 / 14%); }
+.pdf-search-panel form label svg { width: 0.95rem; color: #968b90; }
+.pdf-search-panel form input { min-width: 0; height: 36px; color: #f7eff1; background: transparent; border: 0; outline: 0; font-size: 0.75rem; }
+.pdf-search-panel form button { padding: 0 0.7rem; color: #2c1d22; background: #eaa0b2; border: 0; border-radius: 8px; font-size: 0.7rem; font-weight: 700; }
+.pdf-search-panel form button:disabled { cursor: not-allowed; opacity: 0.45; }
+.pdf-search-summary { margin: 0.8rem 0 0.35rem; color: #a99da2; font-size: 0.67rem; }
+.pdf-search-results { display: grid; gap: 0.45rem; }
+.pdf-search-results > button { padding: 0.65rem; color: #d8ced2; background: #302c30; border: 1px solid #494349; border-radius: 9px; text-align: left; }
+.pdf-search-results > button:hover { background: #3b353a; border-color: #76505b; }
+.pdf-search-results span { color: #f2acbd; font-size: 0.68rem; font-weight: 700; }
+.pdf-search-results p { margin: 0.35rem 0 0; color: #bcb0b5; font-size: 0.7rem; line-height: 1.45; }
+.pdf-toast { position: absolute; z-index: 12; right: 1.25rem; bottom: 1.25rem; display: flex; align-items: center; gap: 0.45rem; padding: 0.7rem 0.85rem; color: #ffeef2; background: #563642; border: 1px solid #885265; border-radius: 10px; box-shadow: 0 12px 32px rgb(0 0 0 / 35%); font-size: 0.72rem; }
+.pdf-toast svg { width: 1rem; height: 1rem; }
 .pdf-render-error { position: absolute; z-index: 2; top: 1rem; left: 50%; padding: 0.7rem 0.9rem; color: #ffbac5; background: #4b2b33; border: 1px solid #79414e; border-radius: 9px; font-size: 0.72rem; transform: translateX(-50%); }
 
 @media (max-width: 1000px) {
