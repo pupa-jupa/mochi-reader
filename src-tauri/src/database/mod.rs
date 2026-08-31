@@ -1,3 +1,4 @@
+pub mod annotation_repository;
 pub mod bookmark_repository;
 pub mod cache_repository;
 pub mod collection_repository;

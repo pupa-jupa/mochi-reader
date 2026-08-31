@@ -11,6 +11,7 @@ import {
   Heart,
   Images,
   Settings,
+  StickyNote,
 } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
@@ -25,6 +26,7 @@ const navigation = [
   { to: '/favorites', label: 'Избранное', icon: Heart },
   { to: '/collections', label: 'Коллекции', icon: FolderHeart },
   { to: '/bookmarks', label: 'Закладки', icon: Bookmark },
+  { to: '/notes', label: 'Заметки', icon: StickyNote },
   { to: '/history', label: 'История', icon: Clock3 },
   { to: '/sources', label: 'Источники', icon: Globe2 },
 ] as const;

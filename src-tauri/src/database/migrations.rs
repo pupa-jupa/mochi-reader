@@ -10,6 +10,7 @@ const SOURCE_CACHE: &str = include_str!("../../migrations/0004_source_cache.sql"
 const MANGADEX_SOURCE: &str = include_str!("../../migrations/0005_mangadex_source.sql");
 const CONTENT_IDENTITY: &str = include_str!("../../migrations/0006_content_identity.sql");
 const REMOTE_LIBRARY: &str = include_str!("../../migrations/0007_remote_library.sql");
+const READER_ANNOTATIONS: &str = include_str!("../../migrations/0008_reader_annotations.sql");
 
 pub fn migrate(connection: &Connection) -> AppResult<()> {
     connection.execute_batch("PRAGMA foreign_keys = ON;")?;
@@ -41,6 +42,10 @@ pub fn migrate(connection: &Connection) -> AppResult<()> {
     }
     if version < 7 {
         connection.execute_batch(REMOTE_LIBRARY)?;
+        version = 7;
+    }
+    if version < 8 {
+        connection.execute_batch(READER_ANNOTATIONS)?;
     }
     connection.execute_batch("PRAGMA foreign_keys = ON;")?;
     Ok(())

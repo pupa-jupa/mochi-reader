@@ -11,6 +11,7 @@ const titles: Record<string, string> = {
   '/favorites': 'Избранное',
   '/collections': 'Коллекции',
   '/bookmarks': 'Закладки',
+  '/notes': 'Заметки',
   '/history': 'История чтения',
   '/sources': 'Онлайн-источники',
   '/settings': 'Настройки',

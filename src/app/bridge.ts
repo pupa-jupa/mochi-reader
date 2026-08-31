@@ -23,6 +23,13 @@ import type {
 import type { AppSettings } from '../types/settings';
 import type { CacheStats } from '../types/cache';
 import type {
+  AnnotationExportFormat,
+  AnnotationQuery,
+  ReaderAnnotation,
+  ReaderAnnotationDraft,
+  ReaderAnnotationUpdate,
+} from '../types/annotations';
+import type {
   RemoteChapter,
   ChapterDownloadResult,
   RemotePage,
@@ -58,6 +65,12 @@ export interface DesktopBridge {
   createBookmark(draft: BookmarkDraft): Promise<string>;
   listBookmarks(): Promise<BookmarkRecord[]>;
   deleteBookmark(id: string): Promise<void>;
+  listAnnotations(query?: AnnotationQuery): Promise<ReaderAnnotation[]>;
+  createAnnotation(draft: ReaderAnnotationDraft): Promise<ReaderAnnotation>;
+  updateAnnotation(id: string, update: ReaderAnnotationUpdate): Promise<ReaderAnnotation>;
+  deleteAnnotation(id: string): Promise<void>;
+  copyText(text: string): Promise<void>;
+  exportAnnotations(query: AnnotationQuery, format: AnnotationExportFormat): Promise<boolean>;
   startReadingSession(workId: string, locator: ReaderLocator): Promise<string>;
   endReadingSession(id: string, locator: ReaderLocator): Promise<void>;
   listHistory(limit?: number): Promise<HistoryEntry[]>;
@@ -144,6 +157,16 @@ export function createDesktopBridge(invoke: InvokeFunction): DesktopBridge {
     createBookmark: (draft) => invoke<string>('create_bookmark', { draft }),
     listBookmarks: () => invoke<BookmarkRecord[]>('list_bookmarks'),
     deleteBookmark: (id) => invoke<void>('delete_bookmark', { id }),
+    listAnnotations: (query = {}) =>
+      invoke<ReaderAnnotation[]>('list_annotations', { query }),
+    createAnnotation: (draft) =>
+      invoke<ReaderAnnotation>('create_annotation', { draft }),
+    updateAnnotation: (id, update) =>
+      invoke<ReaderAnnotation>('update_annotation', { id, update }),
+    deleteAnnotation: (id) => invoke<void>('delete_annotation', { id }),
+    copyText: (text) => invoke<void>('copy_text', { text }),
+    exportAnnotations: (query, format) =>
+      invoke<boolean>('export_annotations', { query, format }),
     startReadingSession: (workId, locator) =>
       invoke<string>('start_reading_session', { workId, locator }),
     endReadingSession: (id, locator) =>

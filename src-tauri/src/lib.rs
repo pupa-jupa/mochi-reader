@@ -57,6 +57,12 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::health_status,
+            commands::annotations::list_annotations,
+            commands::annotations::create_annotation,
+            commands::annotations::update_annotation,
+            commands::annotations::delete_annotation,
+            commands::annotations::copy_text,
+            commands::annotations::export_annotations,
             commands::bookmarks::list_bookmarks,
             commands::bookmarks::create_bookmark,
             commands::bookmarks::delete_bookmark,

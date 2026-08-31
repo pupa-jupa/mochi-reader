@@ -249,4 +249,47 @@ describe('desktop bridge', () => {
     expect(invoke).toHaveBeenNthCalledWith(1, 'open_log_directory');
     expect(invoke).toHaveBeenNthCalledWith(2, 'copy_diagnostic_information');
   });
+
+  it('maps annotation CRUD, clipboard, and export to native commands', async () => {
+    const invoke = vi.fn().mockResolvedValue({ id: 'annotation-1' });
+    const bridge = createDesktopBridge(invoke);
+    const locator = {
+      kind: 'book' as const,
+      chapterId: 'chapter-1',
+      startOffset: 10,
+      endOffset: 20,
+      quote: { exact: 'quiet moon', prefix: '', suffix: '' },
+      domRange: null,
+    };
+    const draft = {
+      workId: 'work-1',
+      kind: 'highlight' as const,
+      quote: 'quiet moon',
+      note: null,
+      locator,
+      color: 'sakura' as const,
+    };
+
+    await bridge.listAnnotations({ workId: 'work-1', kind: 'highlight' });
+    await bridge.createAnnotation(draft);
+    await bridge.updateAnnotation('annotation-1', { note: 'Remember', color: 'lavender' });
+    await bridge.deleteAnnotation('annotation-1');
+    await bridge.copyText('quiet moon');
+    await bridge.exportAnnotations({ workId: 'work-1' }, 'markdown');
+
+    expect(invoke).toHaveBeenNthCalledWith(1, 'list_annotations', {
+      query: { workId: 'work-1', kind: 'highlight' },
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, 'create_annotation', { draft });
+    expect(invoke).toHaveBeenNthCalledWith(3, 'update_annotation', {
+      id: 'annotation-1',
+      update: { note: 'Remember', color: 'lavender' },
+    });
+    expect(invoke).toHaveBeenNthCalledWith(4, 'delete_annotation', { id: 'annotation-1' });
+    expect(invoke).toHaveBeenNthCalledWith(5, 'copy_text', { text: 'quiet moon' });
+    expect(invoke).toHaveBeenNthCalledWith(6, 'export_annotations', {
+      query: { workId: 'work-1' },
+      format: 'markdown',
+    });
+  });
 });

@@ -7,6 +7,7 @@ import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { WorkDetailsPage } from '../features/details/WorkDetailsPage';
 import { HistoryPage } from '../features/history/HistoryPage';
 import { LibraryPage } from '../features/library/LibraryPage';
+import { NotesPage } from '../features/notes/NotesPage';
 import { OnboardingFlow } from '../features/onboarding/OnboardingFlow';
 import { UniversalReaderPage } from '../features/reader/UniversalReaderPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
@@ -42,6 +43,7 @@ export function App() {
               <Route element={<CollectionsPage />} path="collections" />
               <Route element={<CollectionDetailsPage />} path="collections/:id" />
               <Route element={<BookmarksPage />} path="bookmarks" />
+              <Route element={<NotesPage />} path="notes" />
               <Route element={<HistoryPage />} path="history" />
               <Route element={<SourcesPage />} path="sources" />
               <Route element={<SourceCatalogPage />} path="sources/:sourceId" />

@@ -43,7 +43,7 @@ export function BookmarksPage({ bridge }: BookmarksPageProps) {
     return (
       <SectionEmpty
         action={{ label: 'Открыть библиотеку', to: '/library' }}
-        description="Во время чтения нажми Ctrl+B, чтобы сохранить страницу, цитату или заметку."
+        description="Во время чтения нажми Ctrl+B, чтобы сохранить текущую позицию. Выделения и мысли живут в разделе «Заметки»."
         eyebrow="Важные места"
         icon={Bookmark}
         title="Закладки"
@@ -54,7 +54,7 @@ export function BookmarksPage({ bridge }: BookmarksPageProps) {
   return (
     <div className="page simple-page persistent-page">
       <header className="page-heading">
-        <div><p className="eyebrow">Важные места</p><h1>Закладки</h1><p>Цитаты и позиции остаются на этом устройстве.</p></div>
+        <div><p className="eyebrow">Важные места</p><h1>Закладки</h1><p>Сохранённые позиции остаются на этом устройстве.</p></div>
       </header>
       {error ? <div className="notice notice--error" role="alert">{error}</div> : null}
       {loading ? <LoadingState label="Загружаем закладки…" /> : null}

@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ReaderDocument } from '../../types/reader';
+import type { ReaderAnnotation, ReaderAnnotationDraft } from '../../types/annotations';
 import { BookReader } from './BookReaderPage';
 
 const documentFixture: ReaderDocument = {
@@ -20,6 +21,31 @@ const documentFixture: ReaderDocument = {
     },
   ],
 };
+
+function annotationRecord(draft: ReaderAnnotationDraft): ReaderAnnotation {
+  return {
+    ...draft,
+    id: 'annotation-1',
+    contentIdentity: 'local:work-1',
+    workTitle: 'Quiet Moon',
+    workKind: 'book',
+    coverPath: null,
+    createdAt: '2026-09-01T00:00:00Z',
+    updatedAt: '2026-09-01T00:00:00Z',
+  };
+}
+
+function selectText(element: HTMLElement, start = 0, end = element.textContent?.length ?? 0) {
+  const node = element.firstChild;
+  if (!node) throw new Error('text fixture is missing');
+  const range = document.createRange();
+  range.setStart(node, start);
+  range.setEnd(node, end);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  fireEvent.mouseUp(element);
+}
 
 describe('book reader', () => {
   it('renders sanitized reading content and working reader controls', () => {
@@ -109,22 +135,152 @@ describe('book reader', () => {
     });
   });
 
-  it('saves a reader note at the current position', () => {
-    const createBookmark = vi.fn().mockResolvedValue('bookmark-2');
+  it('creates a highlight from the compact text-selection toolbar', async () => {
+    const listAnnotations = vi.fn().mockResolvedValue([]);
+    const createAnnotation = vi
+      .fn<(draft: ReaderAnnotationDraft) => Promise<ReaderAnnotation>>()
+      .mockImplementation(async (draft) => annotationRecord(draft));
     render(
       <MemoryRouter>
-        <BookReader createBookmark={createBookmark} document={documentFixture} />
+        <BookReader
+          createAnnotation={createAnnotation}
+          document={documentFixture}
+          listAnnotations={listAnnotations}
+        />
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Добавить заметку' }));
-    fireEvent.change(screen.getByLabelText('Текст заметки'), {
-      target: { value: 'Вернуться к этой мысли.' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Сохранить заметку' }));
+    await waitFor(() => expect(listAnnotations).toHaveBeenCalledWith({ workId: 'work-1' }));
+    selectText(screen.getByText('Safe text'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Подсветить' }));
 
-    expect(createBookmark).toHaveBeenCalledWith(
-      expect.objectContaining({ note: 'Вернуться к этой мысли.' }),
+    await waitFor(() => {
+      expect(createAnnotation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workId: 'work-1',
+          kind: 'highlight',
+          quote: 'Safe text',
+          note: null,
+          color: 'sakura',
+          locator: expect.objectContaining({
+            kind: 'book',
+            chapterId: 'chapter-0',
+            quote: expect.objectContaining({ exact: 'Safe text' }),
+          }),
+        }),
+      );
+    });
+  });
+
+  it('opens a small selection editor and saves an anchored note', async () => {
+    const createAnnotation = vi
+      .fn<(draft: ReaderAnnotationDraft) => Promise<ReaderAnnotation>>()
+      .mockImplementation(async (draft) => annotationRecord(draft));
+    render(
+      <MemoryRouter>
+        <BookReader
+          createAnnotation={createAnnotation}
+          document={documentFixture}
+          listAnnotations={vi.fn().mockResolvedValue([])}
+        />
+      </MemoryRouter>,
     );
+
+    selectText(screen.getByText('Safe text'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Заметка к выделению' }));
+    fireEvent.change(screen.getByLabelText('Комментарий к выделению'), {
+      target: { value: 'Очень тихий момент.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить заметку к выделению' }));
+
+    await waitFor(() => {
+      expect(createAnnotation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: 'note',
+          quote: 'Safe text',
+          note: 'Очень тихий момент.',
+          color: 'lavender',
+        }),
+      );
+    });
+  });
+
+  it('restores persisted highlights in the matching chapter', async () => {
+    const annotation = annotationRecord({
+      workId: 'work-1',
+      kind: 'highlight',
+      quote: 'Safe text',
+      note: null,
+      locator: {
+        kind: 'book',
+        chapterId: 'chapter-0',
+        startOffset: 11,
+        endOffset: 20,
+        quote: { exact: 'Safe text', prefix: 'First light', suffix: '' },
+        domRange: null,
+      },
+      color: 'butter',
+    });
+    const { container } = render(
+      <MemoryRouter>
+        <BookReader
+          document={documentFixture}
+          listAnnotations={vi.fn().mockResolvedValue([annotation])}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-reader-annotation="annotation-1"]')).toHaveTextContent(
+        'Safe text',
+      );
+    });
+  });
+
+  it('opens a linked annotation in its exact chapter', async () => {
+    const linkedDocument: ReaderDocument = {
+      ...documentFixture,
+      workId: 'work-linked',
+      chapters: [
+        documentFixture.chapters[0]!,
+        {
+          id: 'chapter-1',
+          title: 'Second light',
+          html: '<h1>Second light</h1><p>Exact place</p>',
+          plainTextLength: 23,
+        },
+      ],
+    };
+    const annotation = annotationRecord({
+      workId: 'work-linked',
+      kind: 'note',
+      quote: 'Exact place',
+      note: 'Linked thought',
+      locator: {
+        kind: 'book',
+        chapterId: 'chapter-1',
+        startOffset: 12,
+        endOffset: 23,
+        quote: { exact: 'Exact place', prefix: 'Second light', suffix: '' },
+        domRange: null,
+      },
+      color: 'lavender',
+    });
+
+    const { container } = render(
+      <MemoryRouter>
+        <BookReader
+          document={linkedDocument}
+          focusAnnotationId="annotation-1"
+          listAnnotations={vi.fn().mockResolvedValue([annotation])}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Текущая глава' })).toHaveValue('chapter-1');
+    });
+    expect(container.querySelector('[data-reader-annotation="annotation-1"]')).toHaveTextContent('Exact place');
+    expect(screen.getByRole('complementary', { name: 'Заметки к книге' })).toBeVisible();
   });
 });
