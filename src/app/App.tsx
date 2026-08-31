@@ -2,6 +2,7 @@ import { HashRouter, Route, Routes } from 'react-router-dom';
 
 import { BookmarksPage } from '../features/bookmarks/BookmarksPage';
 import { CollectionsPage } from '../features/collections/CollectionsPage';
+import { CollectionDetailsPage } from '../features/collections/CollectionDetailsPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { WorkDetailsPage } from '../features/details/WorkDetailsPage';
 import { HistoryPage } from '../features/history/HistoryPage';
@@ -39,6 +40,7 @@ export function App() {
               <Route element={<LibraryPage initialFilter="manga" key="manga" />} path="manga" />
               <Route element={<LibraryPage initialFilter="favorite" key="favorites" />} path="favorites" />
               <Route element={<CollectionsPage />} path="collections" />
+              <Route element={<CollectionDetailsPage />} path="collections/:id" />
               <Route element={<BookmarksPage />} path="bookmarks" />
               <Route element={<HistoryPage />} path="history" />
               <Route element={<SourcesPage />} path="sources" />

@@ -1,11 +1,14 @@
 use std::path::Path;
 
-use rusqlite::{Connection, OptionalExtension, Row, params};
+use rusqlite::{Connection, OptionalExtension, Row, params, params_from_iter, types::Value};
 use uuid::Uuid;
 
 use crate::domain::{
     error::{AppError, AppResult},
-    work::{NewWork, WorkDetails, WorkFormat, WorkKind, WorkPage, WorkStatus, WorkSummary},
+    work::{
+        NewWork, WorkDetails, WorkFormat, WorkKind, WorkListQuery, WorkPage, WorkSort, WorkStatus,
+        WorkSummary,
+    },
 };
 
 pub struct WorkRepository<'connection> {
@@ -85,54 +88,54 @@ impl<'connection> WorkRepository<'connection> {
     }
 
     pub fn list(&self, query: &str, offset: u32, limit: u32) -> AppResult<WorkPage> {
-        let limit = limit.clamp(1, 200);
-        let query = query.trim();
-        let mut items = Vec::new();
+        self.list_filtered(&WorkListQuery {
+            search: query.to_string(),
+            offset,
+            limit,
+            ..WorkListQuery::default()
+        })
+    }
 
-        if query.is_empty() {
-            let mut statement = self.connection.prepare(
-                "SELECT
-                    w.id, w.title, w.author, w.kind, w.format, w.cover_path, w.status,
-                    w.favorite, w.missing_file, w.added_at, w.last_opened_at,
-                    COALESCE(p.percent * 100.0, 0.0)
-                 FROM works w
-                 LEFT JOIN reading_progress p ON p.work_id = w.id
-                 ORDER BY w.added_at DESC LIMIT ?1 OFFSET ?2",
-            )?;
-            let rows = statement.query_map(params![limit, offset], map_work_summary)?;
-            for row in rows {
-                items.push(row?);
+    pub fn list_filtered(&self, query: &WorkListQuery) -> AppResult<WorkPage> {
+        let limit = query.limit.clamp(1, 200);
+        let (joins, where_clause, filter_params) = list_filter(query);
+        let order = match query.sort {
+            WorkSort::AddedDesc => "w.added_at DESC, w.id ASC",
+            WorkSort::TitleAsc => "w.title COLLATE NOCASE ASC, w.id ASC",
+            WorkSort::LastOpenedDesc => {
+                "(w.last_opened_at IS NULL) ASC, w.last_opened_at DESC, w.id ASC"
             }
-        } else {
-            let fts_query = to_fts_prefix_query(query);
-            let mut statement = self.connection.prepare(
-                "SELECT
-                    w.id, w.title, w.author, w.kind, w.format, w.cover_path, w.status,
-                    w.favorite, w.missing_file, w.added_at, w.last_opened_at,
-                    COALESCE(p.percent * 100.0, 0.0)
-                 FROM works w
-                 JOIN work_fts f ON f.work_id = w.id
-                 LEFT JOIN reading_progress p ON p.work_id = w.id
-                 WHERE work_fts MATCH ?1
-                 ORDER BY rank, w.added_at DESC LIMIT ?2 OFFSET ?3",
-            )?;
-            let rows = statement.query_map(params![fts_query, limit, offset], map_work_summary)?;
-            for row in rows {
-                items.push(row?);
+            WorkSort::ProgressDesc => {
+                "COALESCE(p.percent, 0.0) DESC, w.title COLLATE NOCASE ASC, w.id ASC"
             }
+        };
+        let sql = format!(
+            "SELECT
+                w.id, w.title, w.author, w.kind, w.format, w.cover_path, w.status,
+                w.favorite, w.missing_file, w.added_at, w.last_opened_at,
+                COALESCE(p.percent * 100.0, 0.0)
+             FROM works w
+             {joins}
+             LEFT JOIN reading_progress p ON p.work_id = w.id
+             {where_clause}
+             ORDER BY {order} LIMIT ? OFFSET ?"
+        );
+        let mut page_params = filter_params.clone();
+        page_params.push(Value::Integer(i64::from(limit)));
+        page_params.push(Value::Integer(i64::from(query.offset)));
+        let mut items = Vec::new();
+        let mut statement = self.connection.prepare(&sql)?;
+        let rows = statement.query_map(params_from_iter(page_params.iter()), map_work_summary)?;
+        for row in rows {
+            items.push(row?);
         }
 
-        let total: i64 = if query.is_empty() {
-            self.connection
-                .query_row("SELECT COUNT(*) FROM works", [], |row| row.get(0))?
-        } else {
-            let fts_query = to_fts_prefix_query(query);
-            self.connection.query_row(
-                "SELECT COUNT(*) FROM work_fts WHERE work_fts MATCH ?1",
-                [fts_query],
-                |row| row.get(0),
-            )?
-        };
+        let count_sql = format!("SELECT COUNT(*) FROM works w {joins} {where_clause}");
+        let total: i64 = self.connection.query_row(
+            &count_sql,
+            params_from_iter(filter_params.iter()),
+            |row| row.get(0),
+        )?;
 
         Ok(WorkPage {
             items,
@@ -259,6 +262,57 @@ impl<'connection> WorkRepository<'connection> {
     }
 }
 
+fn list_filter(query: &WorkListQuery) -> (String, String, Vec<Value>) {
+    let mut joins = String::new();
+    let mut clauses = Vec::new();
+    let mut values = Vec::new();
+    let search = query.search.trim();
+
+    if !search.is_empty() {
+        joins.push_str("JOIN work_fts ON work_fts.work_id = w.id");
+        clauses.push("work_fts MATCH ?".to_string());
+        values.push(Value::Text(to_fts_prefix_query(search)));
+    }
+    if !query.kinds.is_empty() {
+        clauses.push(format!("w.kind IN ({})", placeholders(query.kinds.len())));
+        values.extend(
+            query
+                .kinds
+                .iter()
+                .map(|kind| Value::Text(kind.as_str().to_string())),
+        );
+    }
+    if !query.statuses.is_empty() {
+        clauses.push(format!(
+            "w.status IN ({})",
+            placeholders(query.statuses.len())
+        ));
+        values.extend(
+            query
+                .statuses
+                .iter()
+                .map(|status| Value::Text(status.as_str().to_string())),
+        );
+    }
+    if let Some(favorite) = query.favorite {
+        clauses.push("w.favorite = ?".to_string());
+        values.push(Value::Integer(i64::from(favorite)));
+    }
+
+    let where_clause = if clauses.is_empty() {
+        String::new()
+    } else {
+        format!("WHERE {}", clauses.join(" AND "))
+    };
+    (joins, where_clause, values)
+}
+
+fn placeholders(count: usize) -> String {
+    std::iter::repeat_n("?", count)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 fn normalize_optional<'value>(
     value: Option<&'value str>,
     maximum: usize,
@@ -282,7 +336,7 @@ fn to_fts_prefix_query(query: &str) -> String {
         .join(" AND ")
 }
 
-fn map_work_summary(row: &Row<'_>) -> rusqlite::Result<WorkSummary> {
+pub(crate) fn map_work_summary(row: &Row<'_>) -> rusqlite::Result<WorkSummary> {
     Ok(WorkSummary {
         id: row.get(0)?,
         title: row.get(1)?,

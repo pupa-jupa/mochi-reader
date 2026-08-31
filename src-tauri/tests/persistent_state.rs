@@ -108,6 +108,63 @@ fn bookmarks_history_and_collections_survive_repository_reloads() {
 }
 
 #[test]
+fn collection_members_can_be_reopened_edited_and_removed_without_deleting_the_work() {
+    let connection = Connection::open_in_memory().unwrap();
+    migrate(&connection).unwrap();
+    let work_id = insert_work(&connection);
+    let collection_id = CollectionRepository::new(&connection)
+        .create("Evening", Some("For quiet reading"))
+        .unwrap();
+    CollectionRepository::new(&connection)
+        .add_work(&collection_id, &work_id)
+        .unwrap();
+
+    let reopened = CollectionRepository::new(&connection)
+        .get(&collection_id)
+        .unwrap();
+    assert_eq!(reopened.title, "Evening");
+    assert_eq!(reopened.items.len(), 1);
+    assert_eq!(reopened.items[0].id, work_id);
+    assert_eq!(reopened.items[0].title, "Moonlit pages");
+
+    CollectionRepository::new(&connection)
+        .update(&collection_id, "Rainy evening", Some("Updated shelf"))
+        .unwrap();
+    let updated = CollectionRepository::new(&connection)
+        .get(&collection_id)
+        .unwrap();
+    assert_eq!(updated.title, "Rainy evening");
+    assert_eq!(updated.description.as_deref(), Some("Updated shelf"));
+
+    CollectionRepository::new(&connection)
+        .remove_work(&collection_id, &work_id)
+        .unwrap();
+    assert!(
+        CollectionRepository::new(&connection)
+            .get(&collection_id)
+            .unwrap()
+            .items
+            .is_empty()
+    );
+    assert_eq!(
+        WorkRepository::new(&connection)
+            .get(&work_id)
+            .unwrap()
+            .title,
+        "Moonlit pages"
+    );
+
+    CollectionRepository::new(&connection)
+        .delete(&collection_id)
+        .unwrap();
+    assert!(
+        CollectionRepository::new(&connection)
+            .get(&collection_id)
+            .is_err()
+    );
+}
+
+#[test]
 fn versioned_settings_have_defaults_and_round_trip() {
     let connection = Connection::open_in_memory().unwrap();
     migrate(&connection).unwrap();

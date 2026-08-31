@@ -80,7 +80,7 @@ export function CollectionsPage({ bridge }: CollectionsPageProps) {
             <article className="collection-card" key={collection.id}>
               <div className="collection-card__icon"><FolderHeart aria-hidden="true" /></div>
               <div><span>{collection.itemCount} {bookWord(collection.itemCount)}</span><h2>{collection.title}</h2><p>{collection.description ?? 'Личная подборка Mochi Reader'}</p></div>
-              <Link className="button button--secondary" to="/library"><Library aria-hidden="true" /> Выбрать книги</Link>
+              <Link className="button button--secondary" to={`/collections/${collection.id}`}><Library aria-hidden="true" /> Открыть коллекцию</Link>
             </article>
           ))}
         </div>

@@ -27,6 +27,41 @@ pub enum WorkStatus {
     OnHold,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkSort {
+    #[default]
+    AddedDesc,
+    TitleAsc,
+    LastOpenedDesc,
+    ProgressDesc,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkListQuery {
+    pub search: String,
+    pub kinds: Vec<WorkKind>,
+    pub statuses: Vec<WorkStatus>,
+    pub favorite: Option<bool>,
+    pub sort: WorkSort,
+    pub offset: u32,
+    pub limit: u32,
+}
+
+impl Default for WorkListQuery {
+    fn default() -> Self {
+        Self {
+            search: String::new(),
+            kinds: Vec::new(),
+            statuses: Vec::new(),
+            favorite: None,
+            sort: WorkSort::default(),
+            offset: 0,
+            limit: 40,
+        }
+    }
+}
+
 impl WorkStatus {
     pub fn as_str(self) -> &'static str {
         match self {

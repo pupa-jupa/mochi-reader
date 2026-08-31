@@ -1,23 +1,27 @@
 import { FolderPlus, Library, Plus, Search, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useStore } from 'zustand';
 
 import { BookCard } from '../../components/BookCard';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
-import { libraryStore, type LibraryStore } from '../../stores/libraryStore';
+import {
+  libraryStore,
+  type LibraryFilter,
+  type LibraryStore,
+} from '../../stores/libraryStore';
+import type { LibrarySort } from '../../types/library';
 
 interface LibraryPageProps {
   store?: LibraryStore;
   initialFilter?: LibraryFilter;
 }
 
-export type LibraryFilter = 'all' | 'reading' | 'book' | 'manga' | 'favorite';
-
 const pageCopy: Record<LibraryFilter, { eyebrow: string; title: string; empty: string }> = {
   all: { eyebrow: 'Твоя полка', title: 'Библиотека', empty: 'Книги и манга живут вместе' },
   reading: { eyebrow: 'Продолжить', title: 'Сейчас читаю', empty: 'Активных чтений пока нет' },
+  completed: { eyebrow: 'Прочитано', title: 'Завершено', empty: 'Завершённых историй пока нет' },
   book: { eyebrow: 'Твоя полка', title: 'Книги', empty: 'Добавь первую книгу' },
   manga: { eyebrow: 'Твоя полка', title: 'Манга', empty: 'Добавь первую мангу' },
   favorite: { eyebrow: 'Особая полка', title: 'Избранное', empty: 'Отметь любимые произведения сердцем' },
@@ -25,20 +29,37 @@ const pageCopy: Record<LibraryFilter, { eyebrow: string; title: string; empty: s
 
 export function LibraryPage({ store = libraryStore, initialFilter = 'all' }: LibraryPageProps) {
   const location = useLocation();
+  const [parameters, setParameters] = useSearchParams();
   const items = useStore(store, (state) => state.items);
   const total = useStore(store, (state) => state.total);
-  const query = useStore(store, (state) => state.query);
   const status = useStore(store, (state) => state.status);
   const error = useStore(store, (state) => state.error);
   const lastImport = useStore(store, (state) => state.lastImport);
-  const [draftQuery, setDraftQuery] = useState(query);
-  const [filter, setFilter] = useState<LibraryFilter>(initialFilter);
+  const routeQuery = parameters.get('q') ?? '';
+  const deferredQuery = useDeferredValue(routeQuery);
+  const filter = parseFilter(parameters.get('filter'), initialFilter);
+  const sort = parseSort(parameters.get('sort'));
   const searchRef = useRef<HTMLInputElement>(null);
-  const copy = pageCopy[initialFilter];
+  const copy = pageCopy[filter];
+
+  const updateRoute = useCallback(
+    (patch: { q?: string; filter?: LibraryFilter; sort?: LibrarySort }) => {
+      const next = new URLSearchParams(parameters);
+      if (patch.q !== undefined) setOrDelete(next, 'q', patch.q);
+      if (patch.filter !== undefined) setOrDelete(next, 'filter', patch.filter, 'all');
+      if (patch.sort !== undefined) setOrDelete(next, 'sort', patch.sort, 'added_desc');
+      setParameters(next, { replace: true });
+    },
+    [parameters, setParameters],
+  );
 
   useEffect(() => {
-    if (status === 'idle') void store.getState().load();
-  }, [status, store]);
+    const current = store.getState();
+    const changed =
+      current.query !== deferredQuery || current.filter !== filter || current.sort !== sort;
+    if (changed) store.getState().setView({ query: deferredQuery, filter, sort });
+    if (changed || status === 'idle') void store.getState().load();
+  }, [deferredQuery, filter, sort, status, store]);
 
   useEffect(() => {
     if (new URLSearchParams(location.search).get('focus') === 'search') {
@@ -46,30 +67,11 @@ export function LibraryPage({ store = libraryStore, initialFilter = 'all' }: Lib
     }
   }, [location.search]);
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      if (draftQuery !== store.getState().query) {
-        store.getState().setQuery(draftQuery);
-        void store.getState().load();
-      }
-    }, 250);
-    return () => window.clearTimeout(timeout);
-  }, [draftQuery, store]);
-
   const failedItems = useMemo(
     () => lastImport?.items.filter((item) => item.error !== null) ?? [],
     [lastImport],
   );
-  const visibleItems = useMemo(
-    () =>
-      items.filter((work) => {
-        if (filter === 'reading') return work.status === 'reading';
-        if (filter === 'book' || filter === 'manga') return work.kind === filter;
-        if (filter === 'favorite') return work.favorite;
-        return true;
-      }),
-    [filter, items],
-  );
+  const visibleItems = items;
 
   return (
     <div className="page library-page">
@@ -98,25 +100,35 @@ export function LibraryPage({ store = libraryStore, initialFilter = 'all' }: Lib
           <Search aria-hidden="true" />
           <span className="sr-only">Поиск по библиотеке</span>
           <input
-            onChange={(event) => setDraftQuery(event.target.value)}
+            onChange={(event) => updateRoute({ q: event.target.value })}
             placeholder="Название, автор или серия…"
             ref={searchRef}
             type="search"
-            value={draftQuery}
+            value={routeQuery}
           />
-          {draftQuery ? (
-            <button aria-label="Очистить поиск" onClick={() => setDraftQuery('')} type="button">
+          {routeQuery ? (
+            <button aria-label="Очистить поиск" onClick={() => updateRoute({ q: '' })} type="button">
               <X aria-hidden="true" />
             </button>
           ) : null}
         </label>
         <div aria-label="Фильтр библиотеки" className="filter-pills" role="group">
-          <button aria-pressed={filter === 'all'} onClick={() => setFilter('all')} type="button">Все</button>
-          <button aria-pressed={filter === 'reading'} onClick={() => setFilter('reading')} type="button">Читаю</button>
-          <button aria-pressed={filter === 'book'} onClick={() => setFilter('book')} type="button">Книги</button>
-          <button aria-pressed={filter === 'manga'} onClick={() => setFilter('manga')} type="button">Манга</button>
-          <button aria-pressed={filter === 'favorite'} onClick={() => setFilter('favorite')} type="button">Избранное</button>
+          <button aria-pressed={filter === 'all'} onClick={() => updateRoute({ filter: 'all' })} type="button">Все</button>
+          <button aria-pressed={filter === 'reading'} onClick={() => updateRoute({ filter: 'reading' })} type="button">Читаю</button>
+          <button aria-pressed={filter === 'completed'} onClick={() => updateRoute({ filter: 'completed' })} type="button">Завершено</button>
+          <button aria-pressed={filter === 'book'} onClick={() => updateRoute({ filter: 'book' })} type="button">Книги</button>
+          <button aria-pressed={filter === 'manga'} onClick={() => updateRoute({ filter: 'manga' })} type="button">Манга</button>
+          <button aria-pressed={filter === 'favorite'} onClick={() => updateRoute({ filter: 'favorite' })} type="button">Избранное</button>
         </div>
+        <label className="library-sort">
+          <span className="sr-only">Сортировка библиотеки</span>
+          <select aria-label="Сортировка библиотеки" onChange={(event) => updateRoute({ sort: event.target.value as LibrarySort })} value={sort}>
+            <option value="added_desc">Сначала добавленные недавно</option>
+            <option value="last_opened_desc">Сначала открытые недавно</option>
+            <option value="title_asc">По названию</option>
+            <option value="progress_desc">По прогрессу</option>
+          </select>
+        </label>
       </div>
 
       {status === 'importing' ? (
@@ -164,9 +176,9 @@ export function LibraryPage({ store = libraryStore, initialFilter = 'all' }: Lib
               </Button>
             </>
           }
-          description={draftQuery ? 'Попробуй другое название или очисти поиск.' : 'Добавь первую книгу, мангу или целую папку — исходные файлы останутся на месте.'}
+          description={routeQuery ? 'Попробуй другое название или очисти поиск.' : 'Добавь первую книгу, мангу или целую папку — исходные файлы останутся на месте.'}
           pose="empty-library"
-          title={draftQuery ? 'Ничего не нашлось' : 'Здесь пока тихо'}
+          title={routeQuery ? 'Ничего не нашлось' : 'Здесь пока тихо'}
         />
       ) : null}
 
@@ -203,13 +215,35 @@ export function LibraryPage({ store = libraryStore, initialFilter = 'all' }: Lib
           <Library aria-hidden="true" />
           <h2>На этой полке пока пусто</h2>
           <p>Выбери другой фильтр или добавь произведение в избранное.</p>
-          <Button onClick={() => setFilter('all')} variant="secondary">Показать всё</Button>
+          <Button onClick={() => updateRoute({ filter: 'all' })} variant="secondary">Показать всё</Button>
         </section>
       ) : null}
 
-      {items.length === 0 && status === 'ready' && draftQuery ? (
+      {items.length === 0 && status === 'ready' && routeQuery ? (
         <div className="empty-search-mark"><Library aria-hidden="true" /></div>
       ) : null}
     </div>
   );
+}
+
+function parseFilter(value: string | null, fallback: LibraryFilter): LibraryFilter {
+  return value === 'reading' ||
+    value === 'completed' ||
+    value === 'book' ||
+    value === 'manga' ||
+    value === 'favorite'
+    ? value
+    : fallback;
+}
+
+function parseSort(value: string | null): LibrarySort {
+  return value === 'title_asc' || value === 'last_opened_desc' || value === 'progress_desc'
+    ? value
+    : 'added_desc';
+}
+
+function setOrDelete(parameters: URLSearchParams, key: string, value: string, defaultValue = '') {
+  const normalized = value.trim();
+  if (!normalized || normalized === defaultValue) parameters.delete(key);
+  else parameters.set(key, normalized);
 }

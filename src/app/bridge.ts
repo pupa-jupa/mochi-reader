@@ -14,6 +14,7 @@ import type {
   BookmarkDraft,
   BookmarkRecord,
   CollectionSummary,
+  CollectionDetails,
   HistoryEntry,
   ProgressUpdate,
   ReadingProgress,
@@ -58,8 +59,12 @@ export interface DesktopBridge {
   listHistory(limit?: number): Promise<HistoryEntry[]>;
   clearHistory(): Promise<void>;
   listCollections(): Promise<CollectionSummary[]>;
+  getCollection(id: string): Promise<CollectionDetails>;
   createCollection(title: string, description?: string | null): Promise<string>;
   addToCollection(collectionId: string, workId: string): Promise<void>;
+  updateCollection(id: string, title: string, description?: string | null): Promise<void>;
+  removeFromCollection(collectionId: string, workId: string): Promise<void>;
+  deleteCollection(id: string): Promise<void>;
   getSettings(): Promise<AppSettings>;
   updateSettings(settings: AppSettings): Promise<void>;
   listSources(): Promise<SourceConfig[]>;
@@ -137,10 +142,16 @@ export function createDesktopBridge(invoke: InvokeFunction): DesktopBridge {
     listHistory: (limit = 100) => invoke<HistoryEntry[]>('list_history', { limit }),
     clearHistory: () => invoke<void>('clear_history'),
     listCollections: () => invoke<CollectionSummary[]>('list_collections'),
+    getCollection: (id) => invoke<CollectionDetails>('get_collection', { id }),
     createCollection: (title, description = null) =>
       invoke<string>('create_collection', { title, description }),
     addToCollection: (collectionId, workId) =>
       invoke<void>('add_to_collection', { collectionId, workId }),
+    updateCollection: (id, title, description = null) =>
+      invoke<void>('update_collection', { id, title, description }),
+    removeFromCollection: (collectionId, workId) =>
+      invoke<void>('remove_from_collection', { collectionId, workId }),
+    deleteCollection: (id) => invoke<void>('delete_collection', { id }),
     getSettings: () => invoke<AppSettings>('get_settings'),
     updateSettings: (settings) => invoke<void>('update_settings', { settings }),
     listSources: () => invoke<SourceConfig[]>('list_sources'),

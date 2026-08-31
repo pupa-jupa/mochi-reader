@@ -51,9 +51,15 @@ export interface WorkPage {
 
 export interface LibraryQuery {
   query: string;
+  kinds?: WorkKind[];
+  statuses?: WorkStatus[];
+  favorite?: boolean | null;
+  sort?: LibrarySort;
   offset: number;
   limit: number;
 }
+
+export type LibrarySort = 'added_desc' | 'title_asc' | 'last_opened_desc' | 'progress_desc';
 
 export interface ImportItemResult {
   path: string;

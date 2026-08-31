@@ -7,7 +7,7 @@ use crate::{
     database::work_repository::WorkRepository,
     domain::{
         error::{AppError, AppResult},
-        work::{WorkDetails, WorkFormat, WorkPage, WorkStatus},
+        work::{WorkDetails, WorkFormat, WorkKind, WorkListQuery, WorkPage, WorkSort, WorkStatus},
     },
     import::detect::{DetectedFormat, detect_format},
 };
@@ -17,6 +17,14 @@ use crate::{
 pub struct ListWorksRequest {
     #[serde(default)]
     pub query: String,
+    #[serde(default)]
+    pub kinds: Vec<WorkKind>,
+    #[serde(default)]
+    pub statuses: Vec<WorkStatus>,
+    #[serde(default)]
+    pub favorite: Option<bool>,
+    #[serde(default)]
+    pub sort: WorkSort,
     #[serde(default)]
     pub offset: u32,
     #[serde(default = "default_page_size")]
@@ -32,7 +40,15 @@ pub fn list_works(state: State<'_, AppState>, request: ListWorksRequest) -> AppR
     let connection = state.database.lock().map_err(|_| AppError::Validation {
         message: "Библиотека временно недоступна.".to_string(),
     })?;
-    WorkRepository::new(&connection).list(&request.query, request.offset, request.limit)
+    WorkRepository::new(&connection).list_filtered(&WorkListQuery {
+        search: request.query,
+        kinds: request.kinds,
+        statuses: request.statuses,
+        favorite: request.favorite,
+        sort: request.sort,
+        offset: request.offset,
+        limit: request.limit,
+    })
 }
 
 #[tauri::command]

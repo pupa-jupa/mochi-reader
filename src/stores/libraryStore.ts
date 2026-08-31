@@ -1,18 +1,22 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { desktopBridge, type DesktopBridge } from '../app/bridge';
-import type { ImportBatchResult, WorkSummary } from '../types/library';
+import type { ImportBatchResult, LibraryQuery, LibrarySort, WorkSummary } from '../types/library';
 
 export type LibraryStatus = 'idle' | 'loading' | 'ready' | 'importing' | 'error';
+export type LibraryFilter = 'all' | 'reading' | 'completed' | 'book' | 'manga' | 'favorite';
 
 export interface LibraryState {
   items: WorkSummary[];
   total: number;
   query: string;
+  filter: LibraryFilter;
+  sort: LibrarySort;
   status: LibraryStatus;
   error: string | null;
   lastImport: ImportBatchResult | null;
   setQuery(query: string): void;
+  setView(view: { query: string; filter: LibraryFilter; sort: LibrarySort }): void;
   load(): Promise<void>;
   loadMore(): Promise<void>;
   importFiles(): Promise<void>;
@@ -35,7 +39,9 @@ function errorMessage(error: unknown): string {
 
 export function createLibraryStore(
   bridge: DesktopBridge,
-  initial: Partial<Pick<LibraryState, 'items' | 'total' | 'query' | 'status'>> = {},
+  initial: Partial<
+    Pick<LibraryState, 'items' | 'total' | 'query' | 'filter' | 'sort' | 'status'>
+  > = {},
 ): LibraryStore {
   let requestGeneration = 0;
 
@@ -43,15 +49,18 @@ export function createLibraryStore(
     items: initial.items ?? [],
     total: initial.total ?? 0,
     query: initial.query ?? '',
+    filter: initial.filter ?? 'all',
+    sort: initial.sort ?? 'added_desc',
     status: initial.status ?? 'idle',
     error: null,
     lastImport: null,
     setQuery: (query) => set({ query }),
+    setView: (view) => set(view),
     load: async () => {
       const generation = ++requestGeneration;
       set({ status: 'loading', error: null });
       try {
-        const page = await bridge.listWorks({ query: get().query, offset: 0, limit: 80 });
+        const page = await bridge.listWorks(libraryRequest(get(), 0));
         if (generation !== requestGeneration) return;
         set({ items: page.items, total: page.total, status: 'ready' });
       } catch (error) {
@@ -65,11 +74,7 @@ export function createLibraryStore(
       const generation = requestGeneration;
       set({ status: 'loading', error: null });
       try {
-        const page = await bridge.listWorks({
-          query: current.query,
-          offset: current.items.length,
-          limit: 80,
-        });
+        const page = await bridge.listWorks(libraryRequest(current, current.items.length));
         if (generation !== requestGeneration) return;
         set((state) => {
           const known = new Set(state.items.map((item) => item.id));
@@ -151,3 +156,19 @@ export function createLibraryStore(
 }
 
 export const libraryStore = createLibraryStore(desktopBridge);
+
+function libraryRequest(
+  state: Pick<LibraryState, 'query' | 'filter' | 'sort'>,
+  offset: number,
+): LibraryQuery {
+  return {
+    query: state.query,
+    kinds: state.filter === 'book' || state.filter === 'manga' ? [state.filter] : [],
+    statuses:
+      state.filter === 'reading' || state.filter === 'completed' ? [state.filter] : [],
+    favorite: state.filter === 'favorite' ? true : null,
+    sort: state.sort,
+    offset,
+    limit: 80,
+  };
+}

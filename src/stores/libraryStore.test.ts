@@ -28,8 +28,12 @@ function bridgeFixture(): DesktopBridge {
     listHistory: vi.fn(),
     clearHistory: vi.fn(),
     listCollections: vi.fn(),
+    getCollection: vi.fn(),
     createCollection: vi.fn(),
     addToCollection: vi.fn(),
+    updateCollection: vi.fn(),
+    removeFromCollection: vi.fn(),
+    deleteCollection: vi.fn(),
     getSettings: vi.fn(),
     updateSettings: vi.fn(),
     listSources: vi.fn(),
@@ -60,7 +64,15 @@ describe('library store', () => {
     store.getState().setQuery('moon');
     await store.getState().load();
 
-    expect(bridge.listWorks).toHaveBeenCalledWith({ query: 'moon', offset: 0, limit: 80 });
+    expect(bridge.listWorks).toHaveBeenCalledWith({
+      query: 'moon',
+      kinds: [],
+      statuses: [],
+      favorite: null,
+      sort: 'added_desc',
+      offset: 0,
+      limit: 80,
+    });
     expect(store.getState()).toMatchObject({ status: 'ready', total: 0, items: [] });
   });
 
@@ -155,6 +167,10 @@ describe('library store', () => {
 
     expect(bridge.listWorks).toHaveBeenNthCalledWith(2, {
       query: '',
+      kinds: [],
+      statuses: [],
+      favorite: null,
+      sort: 'added_desc',
       offset: 1,
       limit: 80,
     });

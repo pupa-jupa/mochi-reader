@@ -47,3 +47,7 @@ export interface CollectionSummary {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface CollectionDetails extends CollectionSummary {
+  items: import('./library').WorkSummary[];
+}
