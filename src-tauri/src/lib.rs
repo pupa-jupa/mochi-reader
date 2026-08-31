@@ -88,6 +88,7 @@ pub fn run() {
             commands::settings::get_settings,
             commands::settings::update_settings,
             commands::sources::list_sources,
+            commands::sources::add_builtin_source,
             commands::sources::add_source_from_url,
             commands::sources::import_source_profile,
             commands::sources::set_source_enabled,

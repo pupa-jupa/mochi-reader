@@ -127,6 +127,13 @@ pub struct ChapterBatch {
     pub total: u32,
 }
 
+impl ChapterBatch {
+    pub fn next_offset(&self) -> Option<u32> {
+        let next = self.offset.saturating_add(self.limit);
+        (self.limit > 0 && next < self.total).then_some(next)
+    }
+}
+
 pub fn builtin_source() -> ValidatedSource {
     let config = MangadexConfig {
         schema_version: 1,
@@ -144,6 +151,13 @@ pub fn builtin_source() -> ValidatedSource {
             search: true,
             download: false,
         },
+    }
+}
+
+pub fn builtin_source_for(kind: &str) -> AppResult<ValidatedSource> {
+    match kind {
+        "mangadex" => Ok(builtin_source()),
+        _ => Err(validation("Неизвестный встроенный источник.")),
     }
 }
 

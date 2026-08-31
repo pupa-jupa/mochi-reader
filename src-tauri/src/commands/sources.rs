@@ -12,6 +12,7 @@ use crate::{
     manga::manifest::MangaPageData,
     sources::{
         html_profile::validate_html_profile,
+        mangadex::builtin_source_for,
         model::{RemoteChapter, RemotePage, RemoteSearchPage, SourceConfig},
         probe::probe_manifest,
         service::{
@@ -25,6 +26,15 @@ use crate::{
 pub fn list_sources(state: State<'_, AppState>) -> AppResult<Vec<SourceConfig>> {
     let connection = state.database.lock().map_err(|_| unavailable())?;
     SourceRepository::new(&connection).list()
+}
+
+#[tauri::command]
+pub fn add_builtin_source(state: State<'_, AppState>, kind: String) -> AppResult<SourceConfig> {
+    let source = builtin_source_for(&kind)?;
+    let connection = state.database.lock().map_err(|_| unavailable())?;
+    let repository = SourceRepository::new(&connection);
+    let id = repository.upsert(&source)?;
+    repository.get(&id)
 }
 
 #[tauri::command]

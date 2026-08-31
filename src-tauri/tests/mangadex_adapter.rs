@@ -1,5 +1,5 @@
 use mochi_reader_lib::sources::mangadex::{
-    builtin_source, parse_chapters, parse_pages, parse_search,
+    builtin_source, builtin_source_for, parse_chapters, parse_pages, parse_search,
 };
 
 const SEARCH_FIXTURE: &str = r#"{
@@ -68,6 +68,24 @@ const AT_HOME_FIXTURE: &str = r#"{
   }
 }"#;
 
+const CHAPTER_PAGE_FIXTURE: &str = r#"{
+  "result": "ok",
+  "response": "collection",
+  "data": [],
+  "limit": 100,
+  "offset": 0,
+  "total": 101
+}"#;
+
+const CHAPTER_FINAL_FIXTURE: &str = r#"{
+  "result": "ok",
+  "response": "collection",
+  "data": [],
+  "limit": 100,
+  "offset": 100,
+  "total": 101
+}"#;
+
 #[test]
 fn mangadex_search_prefers_russian_text_and_builds_cover_url() {
     let page = parse_search(&builtin_source(), SEARCH_FIXTURE, 1).unwrap();
@@ -109,4 +127,19 @@ fn mangadex_pages_use_data_saver_and_reject_unknown_cdn() {
         )
         .is_err()
     );
+}
+
+#[test]
+fn builtin_source_only_accepts_the_mangadex_identifier() {
+    assert_eq!(builtin_source_for("mangadex").unwrap().name, "MangaDex");
+    assert!(builtin_source_for("unknown").is_err());
+}
+
+#[test]
+fn chapter_batch_reports_the_next_offset() {
+    let batch = parse_chapters(CHAPTER_PAGE_FIXTURE).unwrap();
+    assert_eq!(batch.next_offset(), Some(100));
+
+    let final_batch = parse_chapters(CHAPTER_FINAL_FIXTURE).unwrap();
+    assert_eq!(final_batch.next_offset(), None);
 }

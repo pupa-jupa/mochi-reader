@@ -88,6 +88,11 @@ impl SourceHttpClient {
             .send()
             .await
             .map_err(|_| validation("Источник не ответил вовремя или недоступен."))?;
+        if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+            return Err(validation(
+                "MangaDex временно ограничил частоту запросов. Подожди немного и повтори.",
+            ));
+        }
         if !response.status().is_success() {
             return Err(validation(&format!(
                 "Источник вернул HTTP {}.",

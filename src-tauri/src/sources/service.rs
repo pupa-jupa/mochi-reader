@@ -11,6 +11,11 @@ use crate::{
         },
         http_client::{ExpectedContent, SourceHttpClient},
         http_policy::{HttpPolicy, resolve_image_url},
+        mangadex::{
+            at_home_url as mangadex_at_home_url, chapter_url as mangadex_chapter_url,
+            parse_chapters as parse_mangadex_chapters, parse_pages as parse_mangadex_pages,
+            parse_search as parse_mangadex_search, search_url as mangadex_search_url,
+        },
         model::{AdapterKind, RemoteChapter, RemotePage, RemoteSearchPage, ValidatedSource},
     },
 };
@@ -51,6 +56,15 @@ pub async fn search_source(
         ));
     }
     let validated = validate_stored(stored)?;
+    if validated.adapter_kind == AdapterKind::Mangadex {
+        let policy = HttpPolicy::for_source(&validated.base_url)?;
+        let url = mangadex_search_url(&validated, query, page)?;
+        let client = SourceHttpClient::new(policy).await?;
+        let (bytes, _) = client
+            .get(&url, ExpectedContent::Json, MAX_CATALOG_BYTES)
+            .await?;
+        return parse_mangadex_search(&validated, utf8(&bytes)?, page);
+    }
     let policy = HttpPolicy::for_source(&validated.base_url)?;
     let template = match validated.adapter_kind {
         AdapterKind::Manifest => validated
@@ -61,9 +75,7 @@ pub async fn search_source(
             .config
             .get("searchPath")
             .and_then(serde_json::Value::as_str),
-        AdapterKind::Mangadex => {
-            return Err(validation("Адаптер MangaDex ещё не инициализирован."));
-        }
+        AdapterKind::Mangadex => unreachable!("MangaDex is dispatched before templates"),
     }
     .ok_or_else(|| validation("В конфигурации источника отсутствует search endpoint."))?;
     let encoded_query = form_urlencoded::byte_serialize(query.as_bytes()).collect::<String>();
@@ -94,6 +106,34 @@ pub async fn load_chapters(
 ) -> AppResult<Vec<RemoteChapter>> {
     let validated = validate_stored(stored)?;
     validate_remote_argument(remote_id, "Идентификатор произведения")?;
+    if validated.adapter_kind == AdapterKind::Mangadex {
+        let policy = HttpPolicy::for_source(&validated.base_url)?;
+        let client = SourceHttpClient::new(policy).await?;
+        let mut chapters = Vec::new();
+        let mut offset = 0;
+        loop {
+            let url = mangadex_chapter_url(&validated, remote_id, offset)?;
+            let (bytes, _) = client
+                .get(&url, ExpectedContent::Json, MAX_CATALOG_BYTES)
+                .await?;
+            let batch = parse_mangadex_chapters(utf8(&bytes)?)?;
+            let next_offset = batch.next_offset();
+            let batch_is_empty = batch.items.is_empty();
+            chapters.extend(batch.items);
+            if batch_is_empty || chapters.len() >= 5_000 {
+                break;
+            }
+            let Some(next) = next_offset else {
+                break;
+            };
+            if next <= offset {
+                break;
+            }
+            offset = next;
+        }
+        chapters.truncate(5_000);
+        return Ok(chapters);
+    }
     let policy = HttpPolicy::for_source(&validated.base_url)?;
     let (url, expected, limit) = match validated.adapter_kind {
         AdapterKind::Manifest => (
@@ -106,9 +146,7 @@ pub async fn load_chapters(
             ExpectedContent::Html,
             MAX_HTML_BYTES,
         ),
-        AdapterKind::Mangadex => {
-            return Err(validation("Адаптер MangaDex ещё не инициализирован."));
-        }
+        AdapterKind::Mangadex => unreachable!("MangaDex is dispatched before templates"),
     };
     let client = SourceHttpClient::new(policy).await?;
     let (bytes, _) = client.get(&url, expected, limit).await?;
@@ -127,6 +165,15 @@ pub async fn load_pages(
 ) -> AppResult<Vec<RemotePage>> {
     let validated = validate_stored(stored)?;
     validate_remote_argument(chapter_id, "Идентификатор главы")?;
+    if validated.adapter_kind == AdapterKind::Mangadex {
+        let policy = HttpPolicy::for_source(&validated.base_url)?;
+        let url = mangadex_at_home_url(&validated, chapter_id)?;
+        let client = SourceHttpClient::new(policy).await?;
+        let (bytes, _) = client
+            .get(&url, ExpectedContent::Json, MAX_CATALOG_BYTES)
+            .await?;
+        return parse_mangadex_pages(&validated, utf8(&bytes)?);
+    }
     let policy = HttpPolicy::for_source(&validated.base_url)?;
     let (url, expected, limit) = match validated.adapter_kind {
         AdapterKind::Manifest => (
@@ -139,9 +186,7 @@ pub async fn load_pages(
             ExpectedContent::Html,
             MAX_HTML_BYTES,
         ),
-        AdapterKind::Mangadex => {
-            return Err(validation("Адаптер MangaDex ещё не инициализирован."));
-        }
+        AdapterKind::Mangadex => unreachable!("MangaDex is dispatched before templates"),
     };
     let client = SourceHttpClient::new(policy).await?;
     let (bytes, _) = client.get(&url, expected, limit).await?;
