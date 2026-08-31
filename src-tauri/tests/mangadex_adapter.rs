@@ -127,6 +127,17 @@ fn mangadex_pages_use_data_saver_and_reject_unknown_cdn() {
         )
         .is_err()
     );
+
+    let dynamic_home =
+        AT_HOME_FIXTURE.replace("uploads.mangadex.org", "cmdxd98sb0x3yprd.mangadex.network");
+    assert!(parse_pages(&source, &dynamic_home).is_ok());
+    assert!(
+        parse_pages(
+            &source,
+            &AT_HOME_FIXTURE.replace("uploads.mangadex.org", "mangadex.network.evil.example",),
+        )
+        .is_err()
+    );
 }
 
 #[test]

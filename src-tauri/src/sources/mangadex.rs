@@ -6,7 +6,7 @@ use url::Url;
 use crate::{
     domain::error::{AppError, AppResult},
     sources::{
-        http_policy::{HttpPolicy, resolve_image_url},
+        http_policy::{HttpPolicy, is_trusted_mangadex_image_url, resolve_image_url},
         model::{
             AdapterKind, RemoteChapter, RemoteMangaSummary, RemotePage, RemoteSearchPage,
             SourceCapabilities, ValidatedSource,
@@ -398,8 +398,8 @@ fn cover_url(source: &ValidatedSource, manga_id: &str, file_name: &str) -> AppRe
 
 fn ensure_image_origin(config: &MangadexConfig, url: &Url) -> AppResult<()> {
     let origin = url.origin().ascii_serialization();
-    if url.scheme() != "https"
-        || !config
+    if !is_trusted_mangadex_image_url(url)
+        && !config
             .image_origins
             .iter()
             .any(|allowed| allowed == &origin)

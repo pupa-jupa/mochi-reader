@@ -3,7 +3,7 @@ use std::{collections::HashSet, net::IpAddr};
 use url::{Host, Origin, Url};
 
 use crate::domain::error::{AppError, AppResult};
-use crate::sources::model::ValidatedSource;
+use crate::sources::model::{AdapterKind, ValidatedSource};
 
 #[derive(Debug, Clone)]
 pub struct HttpPolicy {
@@ -40,6 +40,9 @@ pub fn resolve_image_url(source: &ValidatedSource, value: &str) -> AppResult<Url
     }
     let url = Url::parse(value)
         .map_err(|_| validation("Источник вернул некорректный URL изображения."))?;
+    if source.adapter_kind == AdapterKind::Mangadex && is_trusted_mangadex_image_url(&url) {
+        return Ok(url);
+    }
     let allowed = source
         .config
         .get("imageOrigins")
@@ -58,6 +61,23 @@ pub fn resolve_image_url(source: &ValidatedSource, value: &str) -> AppResult<Url
         ));
     }
     Ok(url)
+}
+
+pub fn is_trusted_mangadex_image_url(url: &Url) -> bool {
+    if url.scheme() != "https"
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.port().is_some_and(|port| port != 443)
+        || url.fragment().is_some()
+    {
+        return false;
+    }
+    url.host_str().is_some_and(|host| {
+        let host = host.to_ascii_lowercase();
+        host == "uploads.mangadex.org"
+            || host == "mangadex.network"
+            || host.ends_with(".mangadex.network")
+    })
 }
 
 impl HttpPolicy {
