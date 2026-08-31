@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "name": "Example HTML Catalog",
+  "baseUrl": "https://manga.example",
+  "searchPath": "/search?q={query}&page={page}",
+  "imageOrigins": [
+    "https://cdn.example"
+  ],
+  "allowDownload": false,
+  "selectors": {
+    "searchItems": ".catalog-card",
+    "title": ".catalog-card__title",
+    "mangaUrl": "a.catalog-card__link@href",
+    "cover": "img.catalog-card__cover@src",
+    "summary": ".catalog-card__summary",
+    "chapterItems": ".chapter-list li.chapter",
+    "chapterTitle": ".chapter__title",
+    "chapterUrl": "a.chapter__link@href",
+    "pageImages": ".reader img.page@src",
+    "nextPage": "a.pagination__next"
+  }
+}

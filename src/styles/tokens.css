@@ -1,0 +1,18 @@
+:root {
+  --ui-scale: 1;
+  --font-display: Georgia, 'Times New Roman', serif;
+  --font-ui: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-reading: Georgia, 'Times New Roman', serif;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-round: 999px;
+  --shadow-soft: 0 10px 35px rgb(106 59 69 / 8%);
+  --shadow-card: 0 8px 20px rgb(106 59 69 / 8%), 0 1px 0 rgb(255 255 255 / 70%) inset;
+  --shadow-raised: 0 18px 55px rgb(106 59 69 / 14%);
+  --sidebar-width: 224px;
+  --sidebar-collapsed: 76px;
+  --topbar-height: 66px;
+  --content-max: 1440px;
+}

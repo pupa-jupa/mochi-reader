@@ -1,0 +1,91 @@
+:root,
+:root[data-theme='sakura'] {
+  color-scheme: light;
+  --bg: #fff2f0;
+  --bg-soft: #ffe9e5;
+  --surface: #fffaf8;
+  --surface-raised: #ffffff;
+  --surface-muted: #fbe5e3;
+  --ink: #3d2d32;
+  --ink-soft: #765f66;
+  --ink-faint: #9d858b;
+  --accent: #c94868;
+  --accent-strong: #a93656;
+  --accent-soft: #ffd9d8;
+  --accent-wash: #ffe9e7;
+  --border: #edcecd;
+  --border-strong: #dbaeb1;
+  --success: #477a64;
+  --success-bg: #e2f3ea;
+  --danger: #a94353;
+  --danger-bg: #ffeaeb;
+  --focus: #8b3653;
+  --reader-paper: #fffaf1;
+  --reader-ink: #3b302d;
+  --cover-book: #c84c6a;
+  --cover-manga: #805f81;
+  --sidebar-bg: #f9dfdc;
+}
+
+:root[data-theme='milk'] {
+  color-scheme: light;
+  --bg: #fffafa;
+  --bg-soft: #fff2f1;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-muted: #f8efee;
+  --ink: #3d3034;
+  --ink-soft: #74666a;
+  --ink-faint: #9c8f92;
+  --accent: #d34f70;
+  --accent-strong: #b53b5d;
+  --accent-soft: #ffdfe3;
+  --accent-wash: #fff0f2;
+  --border: #eddcdd;
+  --border-strong: #dbc0c3;
+  --success: #467461;
+  --success-bg: #e8f5ee;
+  --danger: #a94353;
+  --danger-bg: #ffeff0;
+  --focus: #963d5a;
+  --reader-paper: #fffdf8;
+  --reader-ink: #37302e;
+  --cover-book: #d25070;
+  --cover-manga: #826a86;
+  --sidebar-bg: #fff4f3;
+}
+
+:root[data-theme='night'] {
+  color-scheme: dark;
+  --bg: #201a22;
+  --bg-soft: #282028;
+  --surface: #2e252e;
+  --surface-raised: #392d37;
+  --surface-muted: #3b2e39;
+  --ink: #fff5f3;
+  --ink-soft: #d8c2c7;
+  --ink-faint: #a99199;
+  --accent: #f28aa2;
+  --accent-strong: #ffadc0;
+  --accent-soft: #573541;
+  --accent-wash: #392831;
+  --border: #4e3c47;
+  --border-strong: #6b4c5b;
+  --success: #8dd4b1;
+  --success-bg: #263d34;
+  --danger: #ff9cab;
+  --danger-bg: #4b2b33;
+  --focus: #ffc0cf;
+  --reader-paper: #292225;
+  --reader-ink: #f5e9e2;
+  --cover-book: #b94f69;
+  --cover-manga: #705675;
+  --sidebar-bg: #261f27;
+  --shadow-soft: 0 12px 38px rgb(0 0 0 / 22%);
+  --shadow-card: 0 10px 28px rgb(0 0 0 / 24%);
+  --shadow-raised: 0 22px 65px rgb(0 0 0 / 38%);
+}
+
+[data-theme-preview='sakura'] { --preview-a: #fff2f0; --preview-b: #ffd8d1; --preview-c: #c94868; }
+[data-theme-preview='milk'] { --preview-a: #ffffff; --preview-b: #fff0f2; --preview-c: #d34f70; }
+[data-theme-preview='night'] { --preview-a: #211b23; --preview-b: #3b2e39; --preview-c: #f28aa2; }

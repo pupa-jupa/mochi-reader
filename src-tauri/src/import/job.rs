@@ -15,7 +15,10 @@ use crate::{
         error::{AppError, AppErrorPayload, AppResult},
         work::{NewWork, WorkFormat, WorkKind},
     },
-    import::detect::{DetectedFormat, detect_format},
+    import::{
+        detect::{DetectedFormat, detect_format},
+        scanner::{empty_folder_error, expand_import_path},
+    },
 };
 
 const FINGERPRINT_SAMPLE_SIZE: u64 = 64 * 1024;
@@ -54,31 +57,46 @@ pub fn import_paths(
         failed: 0,
     };
 
-    for path in paths {
-        let path_text = path.to_string_lossy().into_owned();
-        match import_path(connection, path, options) {
-            Ok((work_id, title)) => {
-                result.imported = result.imported.saturating_add(1);
-                result.items.push(ImportItemResult {
-                    path: path_text,
-                    work_id: Some(work_id),
-                    title: Some(title),
-                    error: None,
-                });
+    for selected_path in paths {
+        match expand_import_path(selected_path) {
+            Ok(expanded) if expanded.is_empty() => {
+                push_error(
+                    &mut result,
+                    selected_path,
+                    &empty_folder_error(selected_path),
+                );
             }
-            Err(error) => {
-                result.failed = result.failed.saturating_add(1);
-                result.items.push(ImportItemResult {
-                    path: path_text,
-                    work_id: None,
-                    title: None,
-                    error: Some(user_facing_error(&error)),
-                });
+            Ok(expanded) => {
+                for path in expanded {
+                    match import_path(connection, &path, options) {
+                        Ok((work_id, title)) => {
+                            result.imported = result.imported.saturating_add(1);
+                            result.items.push(ImportItemResult {
+                                path: path.to_string_lossy().into_owned(),
+                                work_id: Some(work_id),
+                                title: Some(title),
+                                error: None,
+                            });
+                        }
+                        Err(error) => push_error(&mut result, &path, &error),
+                    }
+                }
             }
+            Err(error) => push_error(&mut result, selected_path, &error),
         }
     }
 
     result
+}
+
+fn push_error(result: &mut ImportBatchResult, path: &Path, error: &AppError) {
+    result.failed = result.failed.saturating_add(1);
+    result.items.push(ImportItemResult {
+        path: path.to_string_lossy().into_owned(),
+        work_id: None,
+        title: None,
+        error: Some(user_facing_error(error)),
+    });
 }
 
 fn import_path(
