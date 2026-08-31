@@ -36,6 +36,32 @@ describe('book reader', () => {
     expect(container.querySelector('[onclick]')).toBeNull();
   });
 
+  it('keeps safe embedded FB2 images and local footnote links', () => {
+    const fb2Document: ReaderDocument = {
+      ...documentFixture,
+      format: 'fb2',
+      chapters: [
+        {
+          ...documentFixture.chapters[0]!,
+          html: '<h1>Первая</h1><img alt="Обложка" src="data:image/png;base64,iVBORw0KGgo="><a class="fb2-note-link" href="#fb2-note-1">[1]</a><aside id="fb2-note-1">Примечание</aside>',
+        },
+      ],
+    };
+
+    render(
+      <MemoryRouter>
+        <BookReader document={fb2Document} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('img', { name: 'Обложка' })).toHaveAttribute(
+      'src',
+      'data:image/png;base64,iVBORw0KGgo=',
+    );
+    expect(screen.getByRole('link', { name: '[1]' })).toHaveAttribute('href', '#fb2-note-1');
+    expect(screen.getByText('Примечание')).toBeVisible();
+  });
+
   it('sends a typed bookmark to persistent storage', () => {
     const createBookmark = vi.fn().mockResolvedValue('bookmark-1');
     render(

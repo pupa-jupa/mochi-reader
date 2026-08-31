@@ -728,6 +728,22 @@ input[type='range'] { accent-color: var(--accent); }
 .reader-content pre { padding: 1rem; overflow: auto; background: color-mix(in srgb, var(--reader-border-local) 28%, transparent); border-radius: 8px; font-size: 0.78em; }
 .reader-content img { max-width: 100%; height: auto; margin: 1.5rem auto; }
 .reader-content a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.reader-content figure.fb2-image { display: grid; place-items: center; margin: 2.4rem 0; }
+.reader-content figure.fb2-image img { max-height: min(68vh, 760px); margin: 0; border-radius: 6px; box-shadow: 0 18px 45px rgb(48 34 35 / 12%); object-fit: contain; }
+.reader-content p > img { display: inline; width: auto; max-height: 1.3em; margin: 0 0.12em; vertical-align: -0.2em; }
+.reader-content .fb2-annotation { padding: 1.15rem 1.3rem; margin: 0 0 2.5rem; color: var(--reader-muted-local); background: color-mix(in srgb, var(--accent) 6%, var(--reader-surface-local)); border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--reader-border-local)); border-radius: 12px; font-size: 0.9em; }
+.reader-content .fb2-annotation p:last-child { margin-bottom: 0; }
+.reader-content .fb2-note-link { padding: 0 0.12em; font-size: 0.72em; font-weight: 700; line-height: 1; text-decoration: none; vertical-align: super; }
+.reader-content .fb2-footnotes { padding-top: 1.5rem; margin-top: 4rem; color: var(--reader-muted-local); border-top: 1px solid var(--reader-border-local); font-size: 0.84em; }
+.reader-content .fb2-footnotes h2 { margin-top: 0; font-size: 1.2em; }
+.reader-content .fb2-footnotes p, .reader-content .fb2-verse, .reader-content .fb2-text-author { text-indent: 0; }
+.reader-content .fb2-stanza { margin: 1.5rem 0; }
+.reader-content .fb2-verse { margin-bottom: 0.25em; }
+.reader-content .fb2-text-author { color: var(--reader-muted-local); font-style: italic; text-align: right; }
+.reader-content table { display: block; width: 100%; margin: 2rem 0; overflow-x: auto; border-collapse: collapse; font-size: 0.88em; }
+.reader-content th, .reader-content td { min-width: 8rem; padding: 0.6rem 0.75rem; border: 1px solid var(--reader-border-local); text-align: left; }
+.reader-content th { background: color-mix(in srgb, var(--reader-border-local) 28%, transparent); font-weight: 700; }
+.reader-content .fb2-empty-line { height: 1.25em; }
 .chapter-footer {
   display: grid;
   width: min(var(--reader-content-width), calc(100% - 3rem));

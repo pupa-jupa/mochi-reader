@@ -71,6 +71,7 @@ fn detect_zip(file: File, path: &Path) -> AppResult<DetectedFormat> {
     })?;
     let mut has_epub_mimetype = false;
     let mut has_epub_container = false;
+    let mut fb2_count = 0_u32;
     let mut image_count = 0_u32;
 
     for index in 0..archive.len() {
@@ -86,6 +87,8 @@ fn detect_zip(file: File, path: &Path) -> AppResult<DetectedFormat> {
             has_epub_mimetype = value.trim() == "application/epub+zip";
         } else if name.eq_ignore_ascii_case("META-INF/container.xml") {
             has_epub_container = true;
+        } else if extension(Path::new(&name)).as_deref() == Some("fb2") {
+            fb2_count = fb2_count.saturating_add(1);
         } else if is_image_name(&name) {
             image_count = image_count.saturating_add(1);
         }
@@ -93,6 +96,14 @@ fn detect_zip(file: File, path: &Path) -> AppResult<DetectedFormat> {
 
     if has_epub_mimetype && has_epub_container {
         return Ok(DetectedFormat::Epub);
+    }
+    if fb2_count == 1 {
+        return Ok(DetectedFormat::Fb2);
+    }
+    if fb2_count > 1 {
+        return Err(AppError::Validation {
+            message: "Архив FB2 должен содержать ровно один .fb2-файл.".to_string(),
+        });
     }
     if image_count > 0 {
         return if extension(path).as_deref() == Some("cbz") {

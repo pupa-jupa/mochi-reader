@@ -15,7 +15,7 @@ fn signature_wins_over_a_misleading_extension() {
 }
 
 #[test]
-fn zip_containers_distinguish_epub_from_cbz() {
+fn zip_containers_distinguish_epub_fb2_and_cbz() {
     let epub = tempfile::Builder::new().suffix(".zip").tempfile().unwrap();
     let mut epub_writer = ZipWriter::new(epub.reopen().unwrap());
     epub_writer
@@ -28,6 +28,19 @@ fn zip_containers_distinguish_epub_from_cbz() {
     epub_writer.write_all(b"<container />").unwrap();
     epub_writer.finish().unwrap();
 
+    let fb2 = tempfile::Builder::new()
+        .suffix(".fb2.zip")
+        .tempfile()
+        .unwrap();
+    let mut fb2_writer = ZipWriter::new(fb2.reopen().unwrap());
+    fb2_writer
+        .start_file("book.fb2", SimpleFileOptions::default())
+        .unwrap();
+    fb2_writer
+        .write_all(b"<?xml version=\"1.0\"?><FictionBook />")
+        .unwrap();
+    fb2_writer.finish().unwrap();
+
     let cbz = tempfile::Builder::new().suffix(".cbz").tempfile().unwrap();
     let mut cbz_writer = ZipWriter::new(cbz.reopen().unwrap());
     cbz_writer
@@ -37,6 +50,7 @@ fn zip_containers_distinguish_epub_from_cbz() {
     cbz_writer.finish().unwrap();
 
     assert_eq!(detect_format(epub.path()).unwrap(), DetectedFormat::Epub);
+    assert_eq!(detect_format(fb2.path()).unwrap(), DetectedFormat::Fb2);
     assert_eq!(detect_format(cbz.path()).unwrap(), DetectedFormat::Cbz);
 }
 

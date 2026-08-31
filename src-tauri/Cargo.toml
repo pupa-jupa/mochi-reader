@@ -16,10 +16,13 @@ tauri-build = { version = "2.6.3", features = [] }
 [dependencies]
 ammonia = "4.1.2"
 base64 = "0.22.1"
+chardetng = "1.0.0"
 chrono = { version = "0.4.45", features = ["serde"] }
+encoding_rs = "0.8.35"
+fb2 = "0.4.4"
 infer = "0.22.0"
 pulldown-cmark = "0.13.0"
-quick-xml = "0.39.2"
+quick-xml = { version = "0.39.2", features = ["serialize"] }
 reqwest = { version = "0.13.4", features = ["json"] }
 rusqlite = { version = "0.40.2", features = ["bundled", "chrono", "uuid", "functions"] }
 scraper = "0.27.0"
