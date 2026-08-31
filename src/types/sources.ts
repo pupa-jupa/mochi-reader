@@ -1,4 +1,4 @@
-export type SourceAdapterKind = 'manifest' | 'generic_html';
+export type SourceAdapterKind = 'manifest' | 'generic_html' | 'mangadex';
 
 export interface SourceCapabilities {
   search: boolean;
@@ -33,6 +33,7 @@ export interface RemoteChapter {
   remoteId: string;
   title: string;
   url: string;
+  attribution: string | null;
 }
 
 export interface RemotePage {

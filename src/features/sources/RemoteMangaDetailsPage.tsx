@@ -21,6 +21,7 @@ export function RemoteMangaDetailsPage({ bridge }: RemoteMangaDetailsPageProps) 
   const invalidLink = !sourceId || !remoteId || !mangaUrl;
   const [chapters, setChapters] = useState<RemoteChapter[]>([]);
   const [downloadAllowed, setDownloadAllowed] = useState(false);
+  const [isMangaDex, setIsMangaDex] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [downloadMessage, setDownloadMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(shouldLoad && !invalidLink);
@@ -36,9 +37,9 @@ export function RemoteMangaDetailsPage({ bridge }: RemoteMangaDetailsPageProps) 
       .then(([items, sources]) => {
         if (!active) return;
         setChapters(items);
-        setDownloadAllowed(
-          sources.some((source) => source.id === sourceId && source.capabilities.download),
-        );
+        const selectedSource = sources.find((source) => source.id === sourceId);
+        setDownloadAllowed(Boolean(selectedSource?.capabilities.download));
+        setIsMangaDex(selectedSource?.adapterKind === 'mangadex');
       })
       .catch((reason) => active && setError(sourceError(reason)))
       .finally(() => active && setLoading(false));
@@ -78,6 +79,9 @@ export function RemoteMangaDetailsPage({ bridge }: RemoteMangaDetailsPageProps) 
         <div className="remote-manga-copy">
           <p className="eyebrow"><Globe2 aria-hidden="true" /> Онлайн-произведение</p>
           <h1>{title}</h1>
+          {isMangaDex ? (
+            <p className="source-attribution">Данные и изображения: MangaDex</p>
+          ) : null}
           <div className="remote-manga-badges">
             <span><ShieldCheck aria-hidden="true" /> Проверенный адаптер</span>
             <span>{chapters.length || '—'} глав</span>
@@ -105,7 +109,14 @@ export function RemoteMangaDetailsPage({ bridge }: RemoteMangaDetailsPageProps) 
               <li key={`${chapter.remoteId}:${chapter.url}`}>
                 <Link aria-label={`Читать ${chapter.title}`} to={readerUrl(sourceId, chapter, title, remoteId, mangaUrl)}>
                   <span className="remote-chapter-list__index">{String(index + 1).padStart(2, '0')}</span>
-                  <span><strong>{chapter.title}</strong><small>Открыть в Manga Reader</small></span>
+                  <span>
+                    <strong>{chapter.title}</strong>
+                    <small>
+                      {chapter.attribution
+                        ? `Перевод: ${chapter.attribution}`
+                        : 'Открыть в Manga Reader'}
+                    </small>
+                  </span>
                   <ChevronRight aria-hidden="true" />
                 </Link>
                 {downloadAllowed ? (

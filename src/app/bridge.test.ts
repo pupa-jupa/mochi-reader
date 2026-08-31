@@ -85,6 +85,14 @@ describe('desktop bridge', () => {
     expect(invoke).toHaveBeenCalledWith('import_source_profile', { profileJson });
   });
 
+  it('connects the built-in MangaDex source', async () => {
+    const invoke = vi.fn().mockResolvedValue({ id: 'mangadex' });
+
+    await createDesktopBridge(invoke).addBuiltInSource('mangadex');
+
+    expect(invoke).toHaveBeenCalledWith('add_builtin_source', { kind: 'mangadex' });
+  });
+
   it('maps source catalog search to its native command contract', async () => {
     const invoke = vi.fn().mockResolvedValue({ items: [], hasNextPage: false });
 

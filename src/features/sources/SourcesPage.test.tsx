@@ -17,6 +17,30 @@ const source = {
 };
 
 describe('sources page', () => {
+  it('connects MangaDex once and labels the API adapter', async () => {
+    const mangaDexSource = {
+      ...source,
+      id: 'mangadex',
+      name: 'MangaDex',
+      baseUrl: 'https://api.mangadex.org',
+      adapterKind: 'mangadex' as const,
+    };
+    const bridge = {
+      listSources: vi.fn().mockResolvedValue([]),
+      addBuiltInSource: vi.fn().mockResolvedValue(mangaDexSource),
+      setSourceEnabled: vi.fn(),
+      removeSource: vi.fn(),
+    } as unknown as DesktopBridge;
+    render(<MemoryRouter><SourcesPage bridge={bridge} /></MemoryRouter>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Подключить MangaDex' }));
+
+    expect(await screen.findByRole('heading', { name: 'MangaDex' })).toBeVisible();
+    expect(screen.getByText('MangaDex API')).toBeVisible();
+    expect(screen.getAllByRole('heading', { name: 'MangaDex' })).toHaveLength(1);
+    expect(bridge.addBuiltInSource).toHaveBeenCalledWith('mangadex');
+  });
+
   it('adds a manifest source by URL and exposes its capabilities', async () => {
     const bridge = {
       listSources: vi.fn().mockResolvedValue([]),

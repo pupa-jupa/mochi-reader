@@ -414,6 +414,7 @@ kbd { padding: 0.16rem 0.38rem; color: var(--ink-faint); background: var(--surfa
 .source-catalog-heading .icon-button { flex: 0 0 auto; margin-top: 0.15rem; }
 .source-catalog-heading h1 { margin: 0.18rem 0 0.3rem; }
 .source-catalog-heading p { margin: 0; }
+.source-attribution { color: var(--ink-faint); font-size: 0.68rem; font-weight: 700; }
 .source-search { display: grid; align-items: center; gap: 0.65rem; padding: 0.65rem 0.65rem 0.65rem 1rem; margin-top: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); grid-template-columns: auto minmax(0, 1fr) auto; }
 .source-search > svg { width: 1.2rem; color: var(--ink-faint); }
 .source-search input { width: 100%; min-height: 42px; padding: 0 0.35rem; color: var(--ink); background: transparent; border: 0; outline: 0; font: inherit; }

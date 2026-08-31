@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 import { desktopBridge, isDesktopRuntime, type DesktopBridge } from '../../app/bridge';
 import { Button } from '../../components/Button';
-import type { SourceConfig } from '../../types/sources';
+import type { SourceAdapterKind, SourceConfig } from '../../types/sources';
 
 interface SourcesPageProps {
   bridge?: DesktopBridge;
@@ -72,6 +72,20 @@ export function SourcesPage({ bridge }: SourcesPageProps) {
     }
   }
 
+  async function connectMangaDex() {
+    setBusy(true);
+    setError(null);
+    try {
+      const source = await api.addBuiltInSource('mangadex');
+      setSources((current) => upsertSource(current, source));
+      setMode(null);
+    } catch (reason) {
+      setError(sourceError(reason, 'Не удалось подключить MangaDex.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function toggle(source: SourceConfig) {
     const enabled = !source.enabled;
     setSources((current) =>
@@ -101,23 +115,33 @@ export function SourcesPage({ bridge }: SourcesPageProps) {
     }
   }
 
+  const mangaDexConnected = sources.some((source) => source.adapterKind === 'mangadex');
+
   return (
     <div className="page sources-page">
       <header className="page-heading">
         <div>
           <p className="eyebrow">Расширяемая манга-полка</p>
           <h1>Онлайн-источники</h1>
-          <p>Manifest и декларативные HTML-профили без исполняемого кода.</p>
+          <p>Встроенный MangaDex API, manifest и HTML-профили без исполняемого кода.</p>
         </div>
       </header>
       <section className="source-intro">
         <div className="source-intro__icon"><Globe2 aria-hidden="true" /></div>
         <div><h2>Добавить источник</h2><p>Каждый адаптер ограничен своим HTTPS origin.</p></div>
         <div className="source-intro__actions">
-          <Button aria-label="Добавить по URL" onClick={() => setMode('url')}>
+          <Button
+            aria-label={mangaDexConnected ? 'MangaDex подключён' : 'Подключить MangaDex'}
+            disabled={busy || mangaDexConnected}
+            onClick={() => void connectMangaDex()}
+          >
+            {busy && !mangaDexConnected ? <span className="spinner" /> : <Globe2 aria-hidden="true" />}
+            {mangaDexConnected ? 'MangaDex подключён' : 'Подключить MangaDex'}
+          </Button>
+          <Button aria-label="Добавить по URL" disabled={busy} onClick={() => setMode('url')} variant="secondary">
             <ExternalLink aria-hidden="true" /> Добавить по URL
           </Button>
-          <Button aria-label="Импорт JSON" onClick={() => setMode('profile')} variant="secondary">
+          <Button aria-label="Импорт JSON" disabled={busy} onClick={() => setMode('profile')} variant="secondary">
             <FileJson2 aria-hidden="true" /> Импорт JSON
           </Button>
         </div>
@@ -156,7 +180,7 @@ export function SourcesPage({ bridge }: SourcesPageProps) {
           {sources.map((source) => (
             <article className="source-card" data-disabled={!source.enabled || undefined} key={source.id}>
               <div className="source-card__top"><div className="source-card__logo"><Globe2 aria-hidden="true" /></div><label className="source-card__switch"><span className="sr-only">Источник {source.name} {source.enabled ? 'включён' : 'выключен'}</span><input aria-label={`Источник ${source.name} ${source.enabled ? 'включён' : 'выключен'}`} checked={source.enabled} className="switch" onChange={() => void toggle(source)} type="checkbox" /></label></div>
-              <div><span className="source-card__adapter">{source.adapterKind === 'manifest' ? 'Manifest adapter' : 'HTML profile'}</span><h2>{source.name}</h2><p title={source.baseUrl}>{sourceHost(source.baseUrl)}</p></div>
+              <div><span className="source-card__adapter">{adapterLabel(source.adapterKind)}</span><h2>{source.name}</h2><p title={source.baseUrl}>{sourceHost(source.baseUrl)}</p></div>
               <div className="source-card__capabilities"><span><Search aria-hidden="true" /> Поиск</span>{source.capabilities.download ? <span><Download aria-hidden="true" /> Offline</span> : <span>Только чтение</span>}</div>
               {source.enabled ? <Link className="button button--secondary" to={`/sources/${source.id}`}><Search aria-hidden="true" /> Открыть каталог</Link> : null}
               <Button aria-label={removeConfirmId === source.id ? `Подтвердить удаление ${source.name}` : `Удалить источник ${source.name}`} onClick={() => void remove(source)} variant={removeConfirmId === source.id ? 'danger' : 'ghost'}><Trash2 aria-hidden="true" /> {removeConfirmId === source.id ? 'Точно удалить?' : 'Удалить'}</Button>
@@ -171,6 +195,12 @@ export function SourcesPage({ bridge }: SourcesPageProps) {
 function upsertSource(items: SourceConfig[], source: SourceConfig) {
   const next = items.filter((item) => item.id !== source.id);
   return [...next, source].sort((left, right) => left.name.localeCompare(right.name, 'ru'));
+}
+
+function adapterLabel(kind: SourceAdapterKind) {
+  if (kind === 'mangadex') return 'MangaDex API';
+  if (kind === 'manifest') return 'Manifest adapter';
+  return 'HTML profile';
 }
 
 function sourceError(reason: unknown, fallback: string) {

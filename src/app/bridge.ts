@@ -63,6 +63,7 @@ export interface DesktopBridge {
   getSettings(): Promise<AppSettings>;
   updateSettings(settings: AppSettings): Promise<void>;
   listSources(): Promise<SourceConfig[]>;
+  addBuiltInSource(kind: 'mangadex'): Promise<SourceConfig>;
   addSourceFromUrl(url: string): Promise<SourceConfig>;
   importSourceProfile(profileJson: string): Promise<SourceConfig>;
   setSourceEnabled(id: string, enabled: boolean): Promise<void>;
@@ -143,6 +144,7 @@ export function createDesktopBridge(invoke: InvokeFunction): DesktopBridge {
     getSettings: () => invoke<AppSettings>('get_settings'),
     updateSettings: (settings) => invoke<void>('update_settings', { settings }),
     listSources: () => invoke<SourceConfig[]>('list_sources'),
+    addBuiltInSource: (kind) => invoke<SourceConfig>('add_builtin_source', { kind }),
     addSourceFromUrl: (url) => invoke<SourceConfig>('add_source_from_url', { url }),
     importSourceProfile: (profileJson) =>
       invoke<SourceConfig>('import_source_profile', { profileJson }),

@@ -6,6 +6,33 @@ import type { DesktopBridge } from '../../app/bridge';
 import { SourceCatalogPage } from './SourceCatalogPage';
 
 describe('source catalog page', () => {
+  it('credits MangaDex in its catalog', async () => {
+    const bridge = {
+      listSources: vi.fn().mockResolvedValue([
+        {
+          id: 'mangadex',
+          name: 'MangaDex',
+          baseUrl: 'https://api.mangadex.org',
+          adapterKind: 'mangadex',
+          enabled: true,
+          capabilities: { search: true, download: false },
+          createdAt: '2026-08-31T00:00:00Z',
+          updatedAt: '2026-08-31T00:00:00Z',
+        },
+      ]),
+    } as unknown as DesktopBridge;
+
+    render(
+      <MemoryRouter initialEntries={['/sources/mangadex']}>
+        <Routes>
+          <Route element={<SourceCatalogPage bridge={bridge} />} path="/sources/:sourceId" />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Данные и изображения: MangaDex')).toBeVisible();
+  });
+
   it('searches an enabled source and exposes real manga result links', async () => {
     const bridge = {
       listSources: vi.fn().mockResolvedValue([

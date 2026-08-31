@@ -78,6 +78,9 @@ export function SourceCatalogPage({ bridge }: SourceCatalogPageProps) {
           <p className="eyebrow">Онлайн-каталог {sourceHost ? `· ${sourceHost}` : ''}</p>
           <h1>{title}</h1>
           <p>Поиск идёт через проверенный адаптер; сайт не запускает код внутри приложения.</p>
+          {source?.adapterKind === 'mangadex' ? (
+            <p className="source-attribution">Данные и изображения: MangaDex</p>
+          ) : null}
         </div>
       </header>
 

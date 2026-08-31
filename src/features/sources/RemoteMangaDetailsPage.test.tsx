@@ -6,6 +6,50 @@ import type { DesktopBridge } from '../../app/bridge';
 import { RemoteMangaDetailsPage } from './RemoteMangaDetailsPage';
 
 describe('remote manga details page', () => {
+  it('credits MangaDex and the chapter translation group', async () => {
+    const bridge = {
+      listSources: vi.fn().mockResolvedValue([
+        {
+          id: 'mangadex',
+          name: 'MangaDex',
+          baseUrl: 'https://api.mangadex.org',
+          adapterKind: 'mangadex',
+          enabled: true,
+          capabilities: { search: true, download: false },
+          createdAt: '2026-08-31T00:00:00Z',
+          updatedAt: '2026-08-31T00:00:00Z',
+        },
+      ]),
+      getSourceChapters: vi.fn().mockResolvedValue([
+        {
+          remoteId: 'chapter-1',
+          title: 'Глава 1 · RU',
+          url: 'https://mangadex.org/chapter/chapter-1',
+          attribution: 'Moon Team',
+        },
+      ]),
+    } as unknown as DesktopBridge;
+    const parameters = new URLSearchParams({
+      remoteId: 'moon',
+      url: 'https://mangadex.org/title/moon',
+      title: 'Лунные письма',
+    });
+
+    render(
+      <MemoryRouter initialEntries={[`/sources/mangadex/manga?${parameters.toString()}`]}>
+        <Routes>
+          <Route
+            element={<RemoteMangaDetailsPage bridge={bridge} />}
+            path="/sources/:sourceId/manga"
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Данные и изображения: MangaDex')).toBeVisible();
+    expect(screen.getByText('Перевод: Moon Team')).toBeVisible();
+  });
+
   it('loads chapters through the selected adapter and builds reader links', async () => {
     const bridge = {
       listSources: vi.fn().mockResolvedValue([
