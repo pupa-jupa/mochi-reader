@@ -8,11 +8,45 @@ use mochi_reader_lib::{
         html_profile::validate_html_profile,
         http_policy::HttpPolicy,
         manifest::validate_manifest,
+        model::{AdapterKind, SourceCapabilities, ValidatedSource},
         service::ensure_download_allowed,
     },
 };
 use rusqlite::Connection;
+use serde_json::json;
 use url::Url;
+
+#[test]
+fn mangadex_source_kind_survives_migration_and_upserts_idempotently() {
+    let connection = Connection::open_in_memory().unwrap();
+    migrate(&connection).unwrap();
+    let repository = SourceRepository::new(&connection);
+    let source = ValidatedSource {
+        name: "MangaDex".to_string(),
+        base_url: "https://api.mangadex.org".to_string(),
+        adapter_kind: AdapterKind::Mangadex,
+        config: json!({ "schemaVersion": 1, "dataSaver": true }),
+        capabilities: SourceCapabilities {
+            search: true,
+            download: false,
+        },
+    };
+
+    let first_id = repository.upsert(&source).unwrap();
+    let second_id = repository.upsert(&source).unwrap();
+    let stored = repository.get_stored(&first_id).unwrap();
+    let version: i64 = connection
+        .query_row("SELECT MAX(version) FROM schema_migrations", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+
+    assert_eq!(first_id, second_id);
+    assert_eq!(repository.list().unwrap().len(), 1);
+    assert_eq!(stored.source.adapter_kind, AdapterKind::Mangadex);
+    assert_eq!(stored.source.adapter_kind.as_str(), "mangadex");
+    assert_eq!(version, 5);
+}
 
 #[test]
 fn http_policy_requires_https_and_keeps_requests_on_the_source_origin() {
@@ -92,7 +126,7 @@ fn declarative_html_profiles_cannot_contain_javascript_and_are_persistent() {
             row.get(0)
         })
         .unwrap();
-    assert_eq!(version, 4);
+    assert_eq!(version, 5);
 }
 
 #[test]

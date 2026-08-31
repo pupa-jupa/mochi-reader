@@ -6,6 +6,7 @@ use serde_json::Value;
 pub enum AdapterKind {
     Manifest,
     GenericHtml,
+    Mangadex,
 }
 
 impl AdapterKind {
@@ -13,6 +14,7 @@ impl AdapterKind {
         match self {
             Self::Manifest => "manifest",
             Self::GenericHtml => "generic_html",
+            Self::Mangadex => "mangadex",
         }
     }
 }

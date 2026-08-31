@@ -61,6 +61,9 @@ pub async fn search_source(
             .config
             .get("searchPath")
             .and_then(serde_json::Value::as_str),
+        AdapterKind::Mangadex => {
+            return Err(validation("Адаптер MangaDex ещё не инициализирован."));
+        }
     }
     .ok_or_else(|| validation("В конфигурации источника отсутствует search endpoint."))?;
     let encoded_query = form_urlencoded::byte_serialize(query.as_bytes()).collect::<String>();
@@ -72,6 +75,7 @@ pub async fn search_source(
     let expected = match validated.adapter_kind {
         AdapterKind::Manifest => ExpectedContent::Json,
         AdapterKind::GenericHtml => ExpectedContent::Html,
+        AdapterKind::Mangadex => unreachable!("MangaDex returned before request dispatch"),
     };
     let (bytes, _) = client.get(&url, expected, MAX_CATALOG_BYTES).await?;
     let text = std::str::from_utf8(&bytes)
@@ -79,6 +83,7 @@ pub async fn search_source(
     match validated.adapter_kind {
         AdapterKind::Manifest => parse_manifest_search(&validated, text),
         AdapterKind::GenericHtml => parse_html_search(&validated, text),
+        AdapterKind::Mangadex => unreachable!("MangaDex returned before response parsing"),
     }
 }
 
@@ -101,6 +106,9 @@ pub async fn load_chapters(
             ExpectedContent::Html,
             MAX_HTML_BYTES,
         ),
+        AdapterKind::Mangadex => {
+            return Err(validation("Адаптер MangaDex ещё не инициализирован."));
+        }
     };
     let client = SourceHttpClient::new(policy).await?;
     let (bytes, _) = client.get(&url, expected, limit).await?;
@@ -108,6 +116,7 @@ pub async fn load_chapters(
     match validated.adapter_kind {
         AdapterKind::Manifest => parse_manifest_chapters(&validated, text),
         AdapterKind::GenericHtml => parse_html_chapters(&validated, text),
+        AdapterKind::Mangadex => unreachable!("MangaDex returned before response parsing"),
     }
 }
 
@@ -130,6 +139,9 @@ pub async fn load_pages(
             ExpectedContent::Html,
             MAX_HTML_BYTES,
         ),
+        AdapterKind::Mangadex => {
+            return Err(validation("Адаптер MangaDex ещё не инициализирован."));
+        }
     };
     let client = SourceHttpClient::new(policy).await?;
     let (bytes, _) = client.get(&url, expected, limit).await?;
@@ -137,6 +149,7 @@ pub async fn load_pages(
     match validated.adapter_kind {
         AdapterKind::Manifest => parse_manifest_pages(&validated, text),
         AdapterKind::GenericHtml => parse_html_pages(&validated, text),
+        AdapterKind::Mangadex => unreachable!("MangaDex returned before response parsing"),
     }
 }
 

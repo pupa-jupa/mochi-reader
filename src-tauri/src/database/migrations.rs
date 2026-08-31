@@ -7,6 +7,7 @@ const PERSISTENT_READER_STATE: &str =
     include_str!("../../migrations/0002_persistent_reader_state.sql");
 const SOURCES: &str = include_str!("../../migrations/0003_sources.sql");
 const SOURCE_CACHE: &str = include_str!("../../migrations/0004_source_cache.sql");
+const MANGADEX_SOURCE: &str = include_str!("../../migrations/0005_mangadex_source.sql");
 
 pub fn migrate(connection: &Connection) -> AppResult<()> {
     connection.execute_batch("PRAGMA foreign_keys = ON;")?;
@@ -26,6 +27,11 @@ pub fn migrate(connection: &Connection) -> AppResult<()> {
     }
     if version < 4 {
         connection.execute_batch(SOURCE_CACHE)?;
+        version = 4;
     }
+    if version < 5 {
+        connection.execute_batch(MANGADEX_SOURCE)?;
+    }
+    connection.execute_batch("PRAGMA foreign_keys = ON;")?;
     Ok(())
 }
