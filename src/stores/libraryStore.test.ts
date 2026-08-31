@@ -26,6 +26,7 @@ function bridgeFixture(): DesktopBridge {
     startReadingSession: vi.fn(),
     endReadingSession: vi.fn(),
     listHistory: vi.fn(),
+    deleteHistoryEntry: vi.fn(),
     clearHistory: vi.fn(),
     listCollections: vi.fn(),
     getCollection: vi.fn(),

@@ -19,7 +19,7 @@ import type {
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 import { desktopBridge } from '../../app/bridge';
-import type { ProgressUpdate, ReadingProgress } from '../../types/persistence';
+import type { ProgressUpdate, ReaderLocator, ReadingProgress } from '../../types/persistence';
 
 function savedPage(workId: string) {
   const value = Number(localStorage.getItem(`mochi-reader:pdf-position:${workId}`) ?? 1);
@@ -53,7 +53,7 @@ export function PdfReaderPage() {
           desktopBridge.getProgress(id).catch(() => null),
         ]);
         if (!active) return;
-        setInitialPage(saved?.readerMode === 'pdf' ? saved.pageIndex : null);
+        setInitialPage(saved?.locator.kind === 'pdf' ? saved.locator.pageIndex : null);
         pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
         loadingTask = pdfjs.getDocument({
           data: bytes,
@@ -102,8 +102,8 @@ interface PdfReaderProps {
   workId: string;
   initialPage?: number | null;
   saveProgress?(update: ProgressUpdate): Promise<ReadingProgress>;
-  startReadingSession?(workId: string, chapterId?: string | null, pageIndex?: number | null): Promise<string>;
-  endReadingSession?(id: string, chapterId?: string | null, pageIndex?: number | null): Promise<void>;
+  startReadingSession?(workId: string, locator: ReaderLocator): Promise<string>;
+  endReadingSession?(id: string, locator: ReaderLocator): Promise<void>;
 }
 
 export function PdfReader({
@@ -135,11 +135,8 @@ export function PdfReader({
     localStorage.setItem(`mochi-reader:pdf-position:${workId}`, String(pageNumber));
     ignorePersistenceFailure(saveProgress?.({
       workId,
-      chapterId: null,
-      pageIndex: pageNumber - 1,
-      charOffset: null,
+      locator: { kind: 'pdf', pageIndex: pageNumber - 1 },
       percent: pageNumber / document.numPages,
-      readerMode: 'pdf',
     }));
     return () => {
       active = false;
@@ -152,15 +149,21 @@ export function PdfReader({
     let active = true;
     let sessionId: string | null = null;
     ignorePersistenceFailure(
-      startReadingSession(workId, null, pageRef.current - 1).then((id) => {
+      startReadingSession(workId, { kind: 'pdf', pageIndex: pageRef.current - 1 }).then((id) => {
         if (active) sessionId = id;
-        else ignorePersistenceFailure(endReadingSession?.(id, null, pageRef.current - 1));
+        else ignorePersistenceFailure(endReadingSession?.(id, {
+          kind: 'pdf',
+          pageIndex: pageRef.current - 1,
+        }));
       }),
     );
     return () => {
       active = false;
       if (sessionId) {
-        ignorePersistenceFailure(endReadingSession?.(sessionId, null, pageRef.current - 1));
+        ignorePersistenceFailure(endReadingSession?.(sessionId, {
+          kind: 'pdf',
+          pageIndex: pageRef.current - 1,
+        }));
       }
     };
   }, [endReadingSession, startReadingSession, workId]);

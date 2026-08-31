@@ -28,6 +28,7 @@ impl<'connection> WorkRepository<'connection> {
         }
 
         let id = Uuid::new_v4().to_string();
+        let content_identity = format!("local:{id}");
         let now = chrono::Utc::now().to_rfc3339();
         let file_size = i64::try_from(work.file_size).map_err(|_| AppError::Validation {
             message: "Файл слишком большой для импорта.".to_string(),
@@ -41,8 +42,8 @@ impl<'connection> WorkRepository<'connection> {
         transaction.execute(
             "INSERT INTO works (
                 id, title, author, kind, format, source_path, file_size, fingerprint,
-                cover_path, page_count, chapter_count, added_at, updated_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?12)",
+                cover_path, page_count, chapter_count, added_at, updated_at, content_identity
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?12, ?13)",
             params![
                 id,
                 work.title.trim(),
@@ -56,6 +57,7 @@ impl<'connection> WorkRepository<'connection> {
                 work.page_count,
                 work.chapter_count,
                 now,
+                content_identity,
             ],
         )?;
         transaction.execute(

@@ -12,6 +12,7 @@ pub mod import;
 pub mod manga;
 pub mod parsers;
 pub mod reader;
+pub mod services;
 pub mod sources;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -73,6 +74,7 @@ pub fn run() {
             commands::history::start_reading_session,
             commands::history::end_reading_session,
             commands::history::list_history,
+            commands::history::delete_history_entry,
             commands::history::clear_history,
             commands::import::import_paths,
             commands::library::list_works,

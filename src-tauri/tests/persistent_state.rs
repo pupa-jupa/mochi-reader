@@ -4,13 +4,16 @@ use mochi_reader_lib::{
     database::{
         bookmark_repository::{BookmarkDraft, BookmarkRepository},
         collection_repository::CollectionRepository,
-        history_repository::HistoryRepository,
         migrations::migrate,
-        progress_repository::{ProgressRepository, ProgressUpdate, ReaderMode},
+        reading_session_repository::ReadingSessionRepository,
         settings_repository::{AppSettings, SettingsRepository, ThemeName},
         work_repository::WorkRepository,
     },
-    domain::work::{NewWork, WorkFormat, WorkKind},
+    domain::{
+        reader::{ProgressUpdate, ReaderLocator},
+        work::{NewWork, WorkFormat, WorkKind},
+    },
+    services::reading_progress::ReadingProgressService,
 };
 use rusqlite::Connection;
 
@@ -36,22 +39,27 @@ fn progress_is_upserted_and_exposed_in_library_summaries() {
     let connection = Connection::open_in_memory().unwrap();
     migrate(&connection).unwrap();
     let work_id = insert_work(&connection);
-    let repository = ProgressRepository::new(&connection);
+    let service = ReadingProgressService::new(&connection);
 
-    repository
+    service
         .save(&ProgressUpdate {
             work_id: work_id.clone(),
-            chapter_id: Some("chapter-2".to_string()),
-            page_index: None,
-            char_offset: Some(120),
+            locator: ReaderLocator::Book {
+                chapter_id: Some("chapter-2".to_string()),
+                char_offset: Some(120),
+            },
             percent: 0.64,
-            reader_mode: ReaderMode::Book,
         })
         .unwrap();
 
-    let progress = repository.get(&work_id).unwrap().unwrap();
-    assert_eq!(progress.chapter_id.as_deref(), Some("chapter-2"));
-    assert_eq!(progress.char_offset, Some(120));
+    let progress = service.get_for_work(&work_id).unwrap().unwrap();
+    assert_eq!(
+        progress.locator,
+        ReaderLocator::Book {
+            chapter_id: Some("chapter-2".to_string()),
+            char_offset: Some(120),
+        }
+    );
     assert_eq!(progress.percent, 0.64);
     let summary = WorkRepository::new(&connection)
         .list("", 0, 10)
@@ -83,16 +91,34 @@ fn bookmarks_history_and_collections_survive_repository_reloads() {
     assert_eq!(bookmarks[0].work_title, "Moonlit pages");
     assert_eq!(bookmarks[0].note.as_deref(), Some("return here"));
 
-    let session_id = HistoryRepository::new(&connection)
-        .start(&work_id, Some("chapter-1"), None)
+    let session_id = ReadingSessionRepository::new(&connection)
+        .start(
+            &work_id,
+            &ReaderLocator::Book {
+                chapter_id: Some("chapter-1".to_string()),
+                char_offset: Some(10),
+            },
+        )
         .unwrap();
-    HistoryRepository::new(&connection)
-        .finish(&session_id, Some("chapter-2"), None)
+    ReadingSessionRepository::new(&connection)
+        .finish(
+            &session_id,
+            &ReaderLocator::Book {
+                chapter_id: Some("chapter-2".to_string()),
+                char_offset: Some(20),
+            },
+        )
         .unwrap();
-    let history = HistoryRepository::new(&connection).list(20).unwrap();
+    let history = ReadingSessionRepository::new(&connection).list(20).unwrap();
     assert_eq!(history[0].work_id, work_id);
-    assert_eq!(history[0].chapter_id.as_deref(), Some("chapter-2"));
-    assert!(history[0].closed_at.is_some());
+    assert_eq!(
+        history[0].end_locator,
+        Some(ReaderLocator::Book {
+            chapter_id: Some("chapter-2".to_string()),
+            char_offset: Some(20),
+        })
+    );
+    assert!(history[0].ended_at.is_some());
 
     let collection_id = CollectionRepository::new(&connection)
         .create("Evening", Some("For quiet reading"))
@@ -187,5 +213,5 @@ fn versioned_settings_have_defaults_and_round_trip() {
             row.get(0)
         })
         .unwrap();
-    assert_eq!(version, 5);
+    assert_eq!(version, 6);
 }

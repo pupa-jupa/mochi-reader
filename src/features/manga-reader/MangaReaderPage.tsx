@@ -23,7 +23,12 @@ import {
 import { Link, useParams } from 'react-router-dom';
 
 import { desktopBridge } from '../../app/bridge';
-import type { BookmarkDraft, ProgressUpdate, ReadingProgress } from '../../types/persistence';
+import type {
+  BookmarkDraft,
+  ProgressUpdate,
+  ReaderLocator,
+  ReadingProgress,
+} from '../../types/persistence';
 import type {
   MangaDirection,
   MangaManifest,
@@ -90,7 +95,7 @@ export function MangaReaderPage() {
       createBookmark={desktopBridge.createBookmark}
       endReadingSession={desktopBridge.endReadingSession}
       initialPageIndex={
-        initialProgress?.readerMode === 'manga' ? initialProgress.pageIndex : null
+        initialProgress?.locator.kind === 'manga' ? initialProgress.locator.pageIndex : null
       }
       loadPage={(index) => desktopBridge.getMangaPage(id, index)}
       manifest={manifest}
@@ -107,8 +112,8 @@ interface MangaReaderProps {
   initialPageIndex?: number | null;
   saveProgress?(update: ProgressUpdate): Promise<ReadingProgress>;
   createBookmark?(draft: BookmarkDraft): Promise<string>;
-  startReadingSession?(workId: string, chapterId?: string | null, pageIndex?: number | null): Promise<string>;
-  endReadingSession?(id: string, chapterId?: string | null, pageIndex?: number | null): Promise<void>;
+  startReadingSession?(workId: string, locator: ReaderLocator): Promise<string>;
+  endReadingSession?(id: string, locator: ReaderLocator): Promise<void>;
 }
 
 export function MangaReader({
@@ -165,11 +170,8 @@ export function MangaReader({
     localStorage.setItem(`mochi-reader:manga-position:${manifest.workId}`, String(value));
     ignorePersistenceFailure(saveProgress?.({
       workId: manifest.workId,
-      chapterId: null,
-      pageIndex: value,
-      charOffset: null,
+      locator: { kind: 'manga', chapterId: null, pageIndex: value },
       percent: manifest.pages.length > 0 ? (value + 1) / manifest.pages.length : 0,
-      readerMode: 'manga',
     }));
   }
 
@@ -178,15 +180,27 @@ export function MangaReader({
     let active = true;
     let sessionId: string | null = null;
     ignorePersistenceFailure(
-      startReadingSession(manifest.workId, null, indexRef.current).then((id) => {
+      startReadingSession(manifest.workId, {
+        kind: 'manga',
+        chapterId: null,
+        pageIndex: indexRef.current,
+      }).then((id) => {
         if (active) sessionId = id;
-        else ignorePersistenceFailure(endReadingSession?.(id, null, indexRef.current));
+        else ignorePersistenceFailure(endReadingSession?.(id, {
+          kind: 'manga',
+          chapterId: null,
+          pageIndex: indexRef.current,
+        }));
       }),
     );
     return () => {
       active = false;
       if (sessionId) {
-        ignorePersistenceFailure(endReadingSession?.(sessionId, null, indexRef.current));
+        ignorePersistenceFailure(endReadingSession?.(sessionId, {
+          kind: 'manga',
+          chapterId: null,
+          pageIndex: indexRef.current,
+        }));
       }
     };
   }, [endReadingSession, manifest.workId, startReadingSession]);

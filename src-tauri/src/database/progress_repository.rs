@@ -1,48 +1,11 @@
-use rusqlite::{Connection, OptionalExtension, params};
-use serde::{Deserialize, Serialize};
+use std::{error::Error as StdError, io};
 
-use crate::domain::error::{AppError, AppResult};
+use rusqlite::{Connection, OptionalExtension, params, types::Type};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ReaderMode {
-    Book,
-    Pdf,
-    Manga,
-}
-
-impl ReaderMode {
-    fn as_str(self) -> &'static str {
-        match self {
-            Self::Book => "book",
-            Self::Pdf => "pdf",
-            Self::Manga => "manga",
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ProgressUpdate {
-    pub work_id: String,
-    pub chapter_id: Option<String>,
-    pub page_index: Option<u32>,
-    pub char_offset: Option<u64>,
-    pub percent: f64,
-    pub reader_mode: ReaderMode,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ReadingProgress {
-    pub work_id: String,
-    pub chapter_id: Option<String>,
-    pub page_index: Option<u32>,
-    pub char_offset: Option<u64>,
-    pub percent: f64,
-    pub reader_mode: ReaderMode,
-    pub updated_at: String,
-}
+use crate::domain::{
+    error::{AppError, AppResult},
+    reader::{ProgressUpdate, ReaderLocator, ReaderMode, ReadingProgress},
+};
 
 pub struct ProgressRepository<'connection> {
     connection: &'connection Connection,
@@ -54,27 +17,14 @@ impl<'connection> ProgressRepository<'connection> {
     }
 
     pub fn get(&self, work_id: &str) -> AppResult<Option<ReadingProgress>> {
-        self.connection
-            .query_row(
-                "SELECT work_id, chapter_id, page_index, char_offset, percent, reader_mode, updated_at
-                 FROM reading_progress WHERE work_id = ?1",
-                [work_id],
-                |row| {
-                    Ok(ReadingProgress {
-                        work_id: row.get(0)?,
-                        chapter_id: row.get(1)?,
-                        page_index: row.get::<_, Option<u32>>(2)?,
-                        char_offset: row
-                            .get::<_, Option<i64>>(3)?
-                            .and_then(|value| u64::try_from(value).ok()),
-                        percent: row.get(4)?,
-                        reader_mode: parse_reader_mode(&row.get::<_, String>(5)?),
-                        updated_at: row.get(6)?,
-                    })
-                },
-            )
-            .optional()
-            .map_err(Into::into)
+        self.query_one("work_id", work_id)
+    }
+
+    pub fn get_by_content_identity(
+        &self,
+        content_identity: &str,
+    ) -> AppResult<Option<ReadingProgress>> {
+        self.query_one("content_identity", content_identity)
     }
 
     pub fn save(&self, update: &ProgressUpdate) -> AppResult<ReadingProgress> {
@@ -83,39 +33,43 @@ impl<'connection> ProgressRepository<'connection> {
                 message: "Позиция чтения содержит некорректный процент.".to_string(),
             });
         }
-        let percent = update.percent.clamp(0.0, 1.0);
-        let page_index = update.page_index.map(i64::from);
-        let char_offset = update
-            .char_offset
-            .map(i64::try_from)
-            .transpose()
-            .map_err(|_| AppError::Validation {
-                message: "Позиция в тексте слишком велика.".to_string(),
+        let content_identity = self
+            .connection
+            .query_row(
+                "SELECT content_identity FROM works WHERE id = ?1",
+                [&update.work_id],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()?
+            .ok_or(AppError::NotFound { entity: "work" })?;
+        let locator_json =
+            serde_json::to_string(&update.locator).map_err(|_| AppError::Validation {
+                message: "Не удалось сохранить позицию чтения.".to_string(),
             })?;
+        let percent = update.percent.clamp(0.0, 1.0);
+        let reader_mode = update.locator.mode();
         let now = chrono::Utc::now().to_rfc3339();
         let transaction = self.connection.unchecked_transaction()?;
         transaction.execute(
             "INSERT INTO reading_progress (
-                work_id, chapter_id, page_index, char_offset, percent, reader_mode, updated_at
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-             ON CONFLICT(work_id) DO UPDATE SET
-                chapter_id = excluded.chapter_id,
-                page_index = excluded.page_index,
-                char_offset = excluded.char_offset,
+                content_identity, work_id, locator_json, percent, reader_mode, updated_at
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT(content_identity) DO UPDATE SET
+                work_id = excluded.work_id,
+                locator_json = excluded.locator_json,
                 percent = excluded.percent,
                 reader_mode = excluded.reader_mode,
                 updated_at = excluded.updated_at",
             params![
+                content_identity,
                 update.work_id,
-                update.chapter_id,
-                page_index,
-                char_offset,
+                locator_json,
                 percent,
-                update.reader_mode.as_str(),
+                reader_mode.as_str(),
                 now,
             ],
         )?;
-        let affected = transaction.execute(
+        transaction.execute(
             "UPDATE works
              SET updated_at = ?2,
                  last_opened_at = COALESCE(last_opened_at, ?2),
@@ -123,20 +77,60 @@ impl<'connection> ProgressRepository<'connection> {
              WHERE id = ?1",
             params![update.work_id, now],
         )?;
-        if affected == 0 {
-            return Err(AppError::NotFound { entity: "work" });
-        }
         transaction.commit()?;
-        self.get(&update.work_id)?.ok_or(AppError::NotFound {
-            entity: "reading_progress",
-        })
+        self.get_by_content_identity(&content_identity)?
+            .ok_or(AppError::NotFound {
+                entity: "reading_progress",
+            })
+    }
+
+    fn query_one(&self, column: &str, value: &str) -> AppResult<Option<ReadingProgress>> {
+        let sql = format!(
+            "SELECT content_identity, work_id, locator_json, percent, reader_mode, updated_at
+             FROM reading_progress WHERE {column} = ?1"
+        );
+        self.connection
+            .query_row(&sql, [value], map_progress)
+            .optional()
+            .map_err(Into::into)
     }
 }
 
-fn parse_reader_mode(value: &str) -> ReaderMode {
-    match value {
-        "pdf" => ReaderMode::Pdf,
-        "manga" => ReaderMode::Manga,
-        _ => ReaderMode::Book,
+fn map_progress(row: &rusqlite::Row<'_>) -> rusqlite::Result<ReadingProgress> {
+    let locator_json: String = row.get(2)?;
+    let locator = serde_json::from_str::<ReaderLocator>(&locator_json)
+        .map_err(|error| conversion_error(2, Box::new(error)))?;
+    let reader_mode = parse_reader_mode(&row.get::<_, String>(4)?)
+        .ok_or_else(|| conversion_message(4, "unknown reader mode"))?;
+    if locator.mode() != reader_mode {
+        return Err(conversion_message(2, "locator mode mismatch"));
     }
+    Ok(ReadingProgress {
+        content_identity: row.get(0)?,
+        work_id: row.get(1)?,
+        locator,
+        percent: row.get(3)?,
+        reader_mode,
+        updated_at: row.get(5)?,
+    })
+}
+
+fn parse_reader_mode(value: &str) -> Option<ReaderMode> {
+    match value {
+        "book" => Some(ReaderMode::Book),
+        "pdf" => Some(ReaderMode::Pdf),
+        "manga" => Some(ReaderMode::Manga),
+        _ => None,
+    }
+}
+
+fn conversion_message(index: usize, message: &'static str) -> rusqlite::Error {
+    conversion_error(
+        index,
+        Box::new(io::Error::new(io::ErrorKind::InvalidData, message)),
+    )
+}
+
+fn conversion_error(index: usize, error: Box<dyn StdError + Send + Sync>) -> rusqlite::Error {
+    rusqlite::Error::FromSqlConversionFailure(index, Type::Text, error)
 }

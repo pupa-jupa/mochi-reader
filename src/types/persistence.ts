@@ -1,16 +1,20 @@
 export type ReaderMode = 'book' | 'pdf' | 'manga';
 
+export type ReaderLocator =
+  | { kind: 'book'; chapterId: string | null; charOffset: number | null }
+  | { kind: 'pdf'; pageIndex: number }
+  | { kind: 'manga'; chapterId: string | null; pageIndex: number };
+
 export interface ReadingProgress {
+  contentIdentity: string;
   workId: string;
-  chapterId: string | null;
-  pageIndex: number | null;
-  charOffset: number | null;
+  locator: ReaderLocator;
   percent: number;
   readerMode: ReaderMode;
   updatedAt: string;
 }
 
-export type ProgressUpdate = Omit<ReadingProgress, 'updatedAt'>;
+export type ProgressUpdate = Pick<ReadingProgress, 'workId' | 'locator' | 'percent'>;
 
 export interface BookmarkDraft {
   workId: string;
@@ -31,12 +35,16 @@ export interface BookmarkRecord extends BookmarkDraft {
 
 export interface HistoryEntry {
   id: string;
+  contentIdentity: string;
   workId: string;
   workTitle: string;
-  chapterId: string | null;
-  pageIndex: number | null;
-  openedAt: string;
-  closedAt: string | null;
+  workKind: import('./library').WorkKind;
+  coverPath: string | null;
+  startLocator: ReaderLocator;
+  endLocator: ReaderLocator | null;
+  startedAt: string;
+  endedAt: string | null;
+  durationSeconds: number | null;
 }
 
 export interface CollectionSummary {

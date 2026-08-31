@@ -17,6 +17,7 @@ import type {
   CollectionDetails,
   HistoryEntry,
   ProgressUpdate,
+  ReaderLocator,
   ReadingProgress,
 } from '../types/persistence';
 import type { AppSettings } from '../types/settings';
@@ -54,9 +55,10 @@ export interface DesktopBridge {
   createBookmark(draft: BookmarkDraft): Promise<string>;
   listBookmarks(): Promise<BookmarkRecord[]>;
   deleteBookmark(id: string): Promise<void>;
-  startReadingSession(workId: string, chapterId?: string | null, pageIndex?: number | null): Promise<string>;
-  endReadingSession(id: string, chapterId?: string | null, pageIndex?: number | null): Promise<void>;
+  startReadingSession(workId: string, locator: ReaderLocator): Promise<string>;
+  endReadingSession(id: string, locator: ReaderLocator): Promise<void>;
   listHistory(limit?: number): Promise<HistoryEntry[]>;
+  deleteHistoryEntry(id: string): Promise<void>;
   clearHistory(): Promise<void>;
   listCollections(): Promise<CollectionSummary[]>;
   getCollection(id: string): Promise<CollectionDetails>;
@@ -135,11 +137,12 @@ export function createDesktopBridge(invoke: InvokeFunction): DesktopBridge {
     createBookmark: (draft) => invoke<string>('create_bookmark', { draft }),
     listBookmarks: () => invoke<BookmarkRecord[]>('list_bookmarks'),
     deleteBookmark: (id) => invoke<void>('delete_bookmark', { id }),
-    startReadingSession: (workId, chapterId = null, pageIndex = null) =>
-      invoke<string>('start_reading_session', { workId, chapterId, pageIndex }),
-    endReadingSession: (id, chapterId = null, pageIndex = null) =>
-      invoke<void>('end_reading_session', { id, chapterId, pageIndex }),
+    startReadingSession: (workId, locator) =>
+      invoke<string>('start_reading_session', { workId, locator }),
+    endReadingSession: (id, locator) =>
+      invoke<void>('end_reading_session', { id, locator }),
     listHistory: (limit = 100) => invoke<HistoryEntry[]>('list_history', { limit }),
+    deleteHistoryEntry: (id) => invoke<void>('delete_history_entry', { id }),
     clearHistory: () => invoke<void>('clear_history'),
     listCollections: () => invoke<CollectionSummary[]>('list_collections'),
     getCollection: (id) => invoke<CollectionDetails>('get_collection', { id }),

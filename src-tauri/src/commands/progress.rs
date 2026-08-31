@@ -2,8 +2,11 @@ use tauri::State;
 
 use crate::{
     app_state::AppState,
-    database::progress_repository::{ProgressRepository, ProgressUpdate, ReadingProgress},
-    domain::error::{AppError, AppResult},
+    domain::{
+        error::{AppError, AppResult},
+        reader::{ProgressUpdate, ReadingProgress},
+    },
+    services::reading_progress::ReadingProgressService,
 };
 
 #[tauri::command]
@@ -12,7 +15,7 @@ pub fn get_progress(
     work_id: String,
 ) -> AppResult<Option<ReadingProgress>> {
     let connection = state.database.lock().map_err(|_| unavailable())?;
-    ProgressRepository::new(&connection).get(&work_id)
+    ReadingProgressService::new(&connection).get_for_work(&work_id)
 }
 
 #[tauri::command]
@@ -21,7 +24,7 @@ pub fn save_progress(
     update: ProgressUpdate,
 ) -> AppResult<ReadingProgress> {
     let connection = state.database.lock().map_err(|_| unavailable())?;
-    ProgressRepository::new(&connection).save(&update)
+    ReadingProgressService::new(&connection).save(&update)
 }
 
 fn unavailable() -> AppError {

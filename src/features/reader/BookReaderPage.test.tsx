@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { ReaderDocument } from '../../types/reader';
 import { BookReader } from './BookReaderPage';
@@ -53,6 +53,34 @@ describe('book reader', () => {
         percent: expect.any(Number),
       }),
     );
+  });
+
+  it('starts a reading session from the restored typed locator', async () => {
+    const startReadingSession = vi.fn().mockResolvedValue('session-1');
+    render(
+      <MemoryRouter>
+        <BookReader
+          document={documentFixture}
+          initialProgress={{
+            contentIdentity: 'local:work-1',
+            workId: 'work-1',
+            locator: { kind: 'book', chapterId: 'chapter-0', charOffset: 12 },
+            percent: 0.6,
+            readerMode: 'book',
+            updatedAt: '2026-08-31T12:00:00Z',
+          }}
+          startReadingSession={startReadingSession}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(startReadingSession).toHaveBeenCalledWith('work-1', {
+        kind: 'book',
+        chapterId: 'chapter-0',
+        charOffset: 12,
+      });
+    });
   });
 
   it('saves a reader note at the current position', () => {

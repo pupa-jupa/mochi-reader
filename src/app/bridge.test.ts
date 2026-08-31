@@ -63,16 +63,40 @@ describe('desktop bridge', () => {
     await bridge.getProgress('work-2');
     await bridge.saveProgress({
       workId: 'work-2',
-      chapterId: 'chapter-3',
-      pageIndex: null,
-      charOffset: 42,
+      locator: { kind: 'book', chapterId: 'chapter-3', charOffset: 42 },
       percent: 0.5,
-      readerMode: 'book',
     });
 
     expect(invoke).toHaveBeenNthCalledWith(1, 'get_progress', { workId: 'work-2' });
     expect(invoke).toHaveBeenNthCalledWith(2, 'save_progress', {
-      update: expect.objectContaining({ workId: 'work-2', charOffset: 42, percent: 0.5 }),
+      update: expect.objectContaining({
+        workId: 'work-2',
+        locator: { kind: 'book', chapterId: 'chapter-3', charOffset: 42 },
+        percent: 0.5,
+      }),
+    });
+  });
+
+  it('maps typed reading sessions and individual history removal', async () => {
+    const invoke = vi.fn().mockResolvedValue('session-1');
+    const bridge = createDesktopBridge(invoke);
+    const start = { kind: 'manga' as const, chapterId: 'chapter-7', pageIndex: 2 };
+    const end = { kind: 'manga' as const, chapterId: 'chapter-7', pageIndex: 9 };
+
+    await bridge.startReadingSession('work-2', start);
+    await bridge.endReadingSession('session-1', end);
+    await bridge.deleteHistoryEntry('session-1');
+
+    expect(invoke).toHaveBeenNthCalledWith(1, 'start_reading_session', {
+      workId: 'work-2',
+      locator: start,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, 'end_reading_session', {
+      id: 'session-1',
+      locator: end,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(3, 'delete_history_entry', {
+      id: 'session-1',
     });
   });
 

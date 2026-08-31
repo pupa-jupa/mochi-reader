@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -29,7 +29,10 @@ describe('manga reader', () => {
   });
 
   it('persists page navigation through the reader bridge contract', async () => {
-    const loadPage = vi.fn().mockResolvedValue({ index: 0, dataUrl: 'data:image/png;base64,AAAA' });
+    const loadPage = vi.fn().mockImplementation(async (index: number) => ({
+      index,
+      dataUrl: 'data:image/png;base64,AAAA',
+    }));
     const saveProgress = vi.fn().mockResolvedValue({});
     render(
       <MemoryRouter>
@@ -37,11 +40,17 @@ describe('manga reader', () => {
       </MemoryRouter>,
     );
 
+    await screen.findByRole('img', { name: 'Страница 1' });
     fireEvent.click(screen.getByRole('button', { name: 'Следующая страница' }));
 
-    expect(saveProgress).toHaveBeenCalledWith(
-      expect.objectContaining({ workId: 'manga-1', pageIndex: 1, readerMode: 'manga' }),
-    );
+    await waitFor(() => {
+      expect(saveProgress).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workId: 'manga-1',
+          locator: { kind: 'manga', chapterId: null, pageIndex: 1 },
+        }),
+      );
+    });
   });
 
   it('saves a bookmark for the visible manga page', () => {

@@ -27,6 +27,7 @@ import { desktopBridge } from '../../app/bridge';
 import type {
   BookmarkDraft,
   ProgressUpdate,
+  ReaderLocator,
   ReadingProgress,
 } from '../../types/persistence';
 import type { ReaderDocument } from '../../types/reader';
@@ -140,8 +141,8 @@ interface BookReaderProps {
   initialProgress?: ReadingProgress | null;
   saveProgress?(update: ProgressUpdate): Promise<ReadingProgress>;
   createBookmark?(draft: BookmarkDraft): Promise<string>;
-  startReadingSession?(workId: string, chapterId?: string | null, pageIndex?: number | null): Promise<string>;
-  endReadingSession?(id: string, chapterId?: string | null, pageIndex?: number | null): Promise<void>;
+  startReadingSession?(workId: string, locator: ReaderLocator): Promise<string>;
+  endReadingSession?(id: string, locator: ReaderLocator): Promise<void>;
 }
 
 export function BookReader({
@@ -153,16 +154,17 @@ export function BookReader({
   endReadingSession,
 }: BookReaderProps) {
   const saved = useMemo(() => {
-    if (initialProgress?.readerMode === 'book' && initialProgress.chapterId) {
+    if (initialProgress?.locator.kind === 'book' && initialProgress.locator.chapterId) {
+      const locator = initialProgress.locator;
       const savedChapter = document.chapters.find(
-        (chapter) => chapter.id === initialProgress.chapterId,
+        (chapter) => chapter.id === locator.chapterId,
       );
       const chapterProgress =
-        savedChapter && initialProgress.charOffset !== null && savedChapter.plainTextLength > 0
-          ? initialProgress.charOffset / savedChapter.plainTextLength
+        savedChapter && locator.charOffset !== null && savedChapter.plainTextLength > 0
+          ? locator.charOffset / savedChapter.plainTextLength
           : initialProgress.percent;
       return {
-        chapterId: initialProgress.chapterId,
+        chapterId: locator.chapterId,
         progress: normalizeReaderProgress(chapterProgress),
         updatedAt: initialProgress.updatedAt,
       };
@@ -186,8 +188,23 @@ export function BookReader({
   const searchRef = useRef<HTMLInputElement>(null);
   const saveTimerRef = useRef<number | null>(null);
   const chapter = document.chapters[chapterIndex] ?? document.chapters[0];
-  const locationRef = useRef({ chapterId: chapter?.id ?? null, pageIndex: null as number | null });
-  locationRef.current = { chapterId: chapter?.id ?? null, pageIndex: null };
+  const locationRef = useRef<ReaderLocator>(
+    initialProgress?.locator.kind === 'book'
+      ? initialProgress.locator
+      : {
+          kind: 'book',
+          chapterId: chapter?.id ?? null,
+          charOffset: null,
+        },
+  );
+  locationRef.current = {
+    kind: 'book',
+    chapterId: chapter?.id ?? null,
+    charOffset:
+      locationRef.current.kind === 'book' && locationRef.current.chapterId === chapter?.id
+        ? locationRef.current.charOffset
+        : null,
+  };
 
   const cleanHtml = useMemo(
     () =>
@@ -218,13 +235,16 @@ export function BookReader({
     if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
     const progress = currentProgress();
     saveReaderPosition(document.workId, { chapterId: chapter.id, progress });
+    const locator: ReaderLocator = {
+      kind: 'book',
+      chapterId: chapter.id,
+      charOffset: Math.round(chapter.plainTextLength * progress),
+    };
+    locationRef.current = locator;
     ignorePersistenceFailure(saveProgress?.({
       workId: document.workId,
-      chapterId: chapter.id,
-      pageIndex: null,
-      charOffset: Math.round(chapter.plainTextLength * progress),
+      locator,
       percent: normalizeReaderProgress((chapterIndex + progress) / document.chapters.length),
-      readerMode: 'book',
     }));
   }
 
@@ -259,19 +279,15 @@ export function BookReader({
     let active = true;
     let sessionId: string | null = null;
     ignorePersistenceFailure(
-      startReadingSession(document.workId, locationRef.current.chapterId, null).then((id) => {
+      startReadingSession(document.workId, locationRef.current).then((id) => {
         if (active) sessionId = id;
-        else ignorePersistenceFailure(endReadingSession?.(id, locationRef.current.chapterId, null));
+        else ignorePersistenceFailure(endReadingSession?.(id, locationRef.current));
       }),
     );
     return () => {
       active = false;
       if (sessionId) {
-        ignorePersistenceFailure(endReadingSession?.(
-          sessionId,
-          locationRef.current.chapterId,
-          locationRef.current.pageIndex,
-        ));
+        ignorePersistenceFailure(endReadingSession?.(sessionId, locationRef.current));
       }
     };
   }, [document.workId, endReadingSession, startReadingSession]);
