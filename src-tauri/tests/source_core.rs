@@ -49,6 +49,72 @@ fn mangadex_source_kind_survives_migration_and_upserts_idempotently() {
 }
 
 #[test]
+fn mangadex_migration_preserves_existing_source_cache_and_foreign_keys() {
+    let connection = Connection::open_in_memory().unwrap();
+    for schema in [
+        include_str!("../migrations/0001_initial.sql"),
+        include_str!("../migrations/0002_persistent_reader_state.sql"),
+        include_str!("../migrations/0003_sources.sql"),
+        include_str!("../migrations/0004_source_cache.sql"),
+    ] {
+        connection.execute_batch(schema).unwrap();
+    }
+    connection
+        .execute(
+            "INSERT INTO sources (
+                id, name, base_url, adapter_kind, config_json,
+                supports_search, supports_download, created_at, updated_at
+             ) VALUES ('legacy', 'Legacy source', 'https://legacy.example', 'manifest', '{}',
+                       1, 0, '2026-08-30T00:00:00Z', '2026-08-30T00:00:00Z')",
+            [],
+        )
+        .unwrap();
+    connection
+        .execute(
+            "INSERT INTO source_cache_entries (
+                cache_key, source_id, page_url, file_name, media_type,
+                size_bytes, pinned, created_at, last_accessed_at
+             ) VALUES ('cache-key', 'legacy', 'https://legacy.example/page.jpg', 'page.jpg',
+                       'image/jpeg', 128, 0, '2026-08-30T00:00:00Z', '2026-08-30T00:00:00Z')",
+            [],
+        )
+        .unwrap();
+
+    migrate(&connection).unwrap();
+
+    let source_count: i64 = connection
+        .query_row(
+            "SELECT COUNT(*) FROM sources WHERE id = 'legacy'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    let cache_count: i64 = connection
+        .query_row(
+            "SELECT COUNT(*) FROM source_cache_entries WHERE source_id = 'legacy'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    let foreign_keys: i64 = connection
+        .query_row("PRAGMA foreign_keys", [], |row| row.get(0))
+        .unwrap();
+
+    assert_eq!(source_count, 1);
+    assert_eq!(cache_count, 1);
+    assert_eq!(foreign_keys, 1);
+    connection
+        .execute("DELETE FROM sources WHERE id = 'legacy'", [])
+        .unwrap();
+    let cache_count_after_delete: i64 = connection
+        .query_row("SELECT COUNT(*) FROM source_cache_entries", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(cache_count_after_delete, 0);
+}
+
+#[test]
 fn http_policy_requires_https_and_keeps_requests_on_the_source_origin() {
     assert!(HttpPolicy::for_source("http://manga.example").is_err());
     let policy = HttpPolicy::for_source("https://manga.example/catalog").unwrap();

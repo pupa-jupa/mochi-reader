@@ -130,5 +130,5 @@ fn versioned_settings_have_defaults_and_round_trip() {
             row.get(0)
         })
         .unwrap();
-    assert_eq!(version, 4);
+    assert_eq!(version, 5);
 }

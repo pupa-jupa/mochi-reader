@@ -37,6 +37,7 @@ describe('library page', () => {
       getSettings: vi.fn(),
       updateSettings: vi.fn(),
       listSources: vi.fn(),
+      addBuiltInSource: vi.fn(),
       addSourceFromUrl: vi.fn(),
       importSourceProfile: vi.fn(),
       setSourceEnabled: vi.fn(),
