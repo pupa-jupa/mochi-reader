@@ -21,9 +21,9 @@ import { type ThemeName, useSettingsStore } from '../../stores/settingsStore';
 import type { CacheStats } from '../../types/cache';
 
 const themes: Array<{ id: ThemeName; label: string; description: string }> = [
-  { id: 'sakura', label: 'Sakura Pink', description: 'Тёплая сакура' },
-  { id: 'milk', label: 'Strawberry Milk', description: 'Светло и спокойно' },
-  { id: 'night', label: 'Night Sakura', description: 'Для чтения вечером' },
+  { id: 'sakura', label: 'Светлая', description: 'Тёплая светлая палитра' },
+  { id: 'milk', label: 'Нейтральная', description: 'Сдержанная нейтральная палитра' },
+  { id: 'night', label: 'Тёмная', description: 'Тёмная палитра' },
 ];
 
 interface SettingsPageProps {
@@ -102,12 +102,12 @@ export function SettingsPage({ bridge }: SettingsPageProps) {
   return (
     <div className="page settings-page">
       <header className="page-heading">
-        <div><p className="eyebrow">Твой ритм</p><h1>Настройки</h1><p>Изменения применяются сразу и сохраняются автоматически.</p></div>
+        <div><p className="eyebrow">Параметры приложения</p><h1>Настройки</h1><p>Изменения применяются сразу и сохраняются автоматически.</p></div>
         <Button onClick={reset} variant="ghost"><RotateCcw aria-hidden="true" /> Сбросить</Button>
       </header>
 
       <section className="settings-section">
-        <div className="settings-section__heading"><Palette aria-hidden="true" /><div><h2>Оформление</h2><p>Выбери настроение приложения.</p></div></div>
+        <div className="settings-section__heading"><Palette aria-hidden="true" /><div><h2>Оформление</h2><p>Цветовая тема интерфейса.</p></div></div>
         <div className="theme-grid">
           {themes.map((option) => (
             <button
@@ -128,7 +128,7 @@ export function SettingsPage({ bridge }: SettingsPageProps) {
       </section>
 
       <section className="settings-section settings-section--rows">
-        <div className="settings-section__heading"><Accessibility aria-hidden="true" /><div><h2>Интерфейс</h2><p>Размер, движение и характер.</p></div></div>
+        <div className="settings-section__heading"><Accessibility aria-hidden="true" /><div><h2>Интерфейс</h2><p>Масштаб, анимация и иллюстрации.</p></div></div>
         <label className="setting-row">
           <span className="setting-row__icon"><Scaling aria-hidden="true" /></span>
           <span><strong>Масштаб интерфейса</strong><small>От 80% до 130%</small></span>
@@ -148,7 +148,7 @@ export function SettingsPage({ bridge }: SettingsPageProps) {
       </section>
 
       <section className="settings-section settings-section--rows cache-settings">
-        <div className="settings-section__heading"><HardDrive aria-hidden="true" /><div><h2>Кэш онлайн-манги</h2><p>Быстрое чтение и контроль места на диске.</p></div></div>
+        <div className="settings-section__heading"><HardDrive aria-hidden="true" /><div><h2>Кэш онлайн-манги</h2><p>Использование диска и сохранённые страницы.</p></div></div>
         <label className="setting-row">
           <span className="setting-row__icon"><HardDrive aria-hidden="true" /></span>
           <span><strong>Размер кэша</strong><small>Старые временные страницы удаляются автоматически</small></span>

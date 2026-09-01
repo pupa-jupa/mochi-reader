@@ -140,7 +140,7 @@ export function RemoteMangaDetailsPage({ bridge }: RemoteMangaDetailsPageProps) 
           <div><p className="eyebrow">Список глав</p><h2>Читать онлайн</h2></div>
           {!loading ? <span>{chapters.length} {chapterWord(chapters.length)}</span> : null}
         </div>
-        {loading ? <div className="persistent-loading"><span className="spinner" /><p>Собираем главы…</p></div> : null}
+        {loading ? <div className="persistent-loading"><span className="spinner" /><p>Загружаем главы…</p></div> : null}
         {visibleError ? <div className="notice notice--error" role="alert">{visibleError}</div> : null}
         {downloadMessage ? <div className="notice notice--success" role="status"><CheckCircle2 aria-hidden="true" /> {downloadMessage}</div> : null}
         {!loading && !visibleError && chapters.length === 0 ? (

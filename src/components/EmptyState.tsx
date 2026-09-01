@@ -15,7 +15,7 @@ export function EmptyState({ title, description, pose = 'empty-library', actions
     <section className="empty-state">
       <Mascot className="empty-state__mascot" pose={pose} />
       <div className="empty-state__copy">
-        <p className="eyebrow">Место для новой истории</p>
+        <p className="eyebrow">Нет данных</p>
         <h2>{title}</h2>
         <p>{description}</p>
         {actions ? <div className="empty-state__actions">{actions}</div> : null}

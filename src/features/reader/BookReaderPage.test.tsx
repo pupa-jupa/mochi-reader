@@ -56,10 +56,45 @@ describe('book reader', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'First light' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Настройки чтения' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Настройки текста' })).toBeEnabled();
     expect(screen.getByRole('combobox', { name: 'Текущая глава' })).toHaveValue('chapter-0');
     expect(container.querySelector('script')).toBeNull();
     expect(container.querySelector('[onclick]')).toBeNull();
+  });
+
+  it('applies detailed typography controls and can reset them', () => {
+    localStorage.removeItem('mochi-reader:reader-preferences');
+    const { container } = render(
+      <MemoryRouter>
+        <BookReader document={documentFixture} />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Настройки текста' }));
+    fireEvent.change(screen.getByLabelText('Интервал между абзацами'), {
+      target: { value: '1.4' },
+    });
+    fireEvent.change(screen.getByLabelText('Отступ первой строки'), {
+      target: { value: '1.8' },
+    });
+    fireEvent.change(screen.getByLabelText('Межбуквенный интервал'), {
+      target: { value: '0.03' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Моноширинный' }));
+
+    const reader = container.querySelector<HTMLElement>('.book-reader');
+    const content = container.querySelector<HTMLElement>('.reader-content');
+    expect(reader?.style.getPropertyValue('--reader-paragraph-spacing')).toBe('1.4em');
+    expect(reader?.style.getPropertyValue('--reader-paragraph-indent')).toBe('1.8em');
+    expect(reader?.style.getPropertyValue('--reader-letter-spacing')).toBe('0.03em');
+    expect(content).toHaveClass('reader-content--mono');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Сбросить настройки текста' }));
+
+    expect(reader?.style.getPropertyValue('--reader-paragraph-spacing')).toBe('0.7em');
+    expect(reader?.style.getPropertyValue('--reader-paragraph-indent')).toBe('0em');
+    expect(reader?.style.getPropertyValue('--reader-letter-spacing')).toBe('0em');
+    expect(content).toHaveClass('reader-content--serif');
   });
 
   it('keeps safe embedded FB2 images and local footnote links', () => {

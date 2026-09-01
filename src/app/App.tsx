@@ -30,7 +30,7 @@ export function App() {
         {!settingsReady ? (
           <div aria-label="Загружаем настройки" className="app-initializing">
             <span className="spinner" />
-            <p>Раскладываем книги по полкам…</p>
+            <p>Загружаем настройки…</p>
           </div>
         ) : onboardingComplete ? (
           <Routes>

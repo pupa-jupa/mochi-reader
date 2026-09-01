@@ -167,8 +167,8 @@ export function NotesPage({ bridge }: NotesPageProps) {
     return (
       <SectionEmpty
         action={{ label: 'Открыть библиотеку', to: '/library' }}
-        description="Выдели текст во время чтения и сохрани подсветку, цитату или мысль — всё появится здесь."
-        eyebrow="Твоя читательская память"
+        description="Выделите текст во время чтения и сохраните подсветку, цитату или комментарий."
+        eyebrow="Аннотации"
         icon={StickyNote}
         title="Заметок пока нет"
       />
@@ -179,9 +179,9 @@ export function NotesPage({ bridge }: NotesPageProps) {
     <div className="page simple-page notes-page">
       <header className="page-heading notes-heading">
         <div>
-          <p className="eyebrow">Твоя читательская память</p>
+          <p className="eyebrow">Аннотации</p>
           <h1>Заметки</h1>
-          <p>Подсветки, цитаты и мысли из всех книг — с точным переходом обратно к тексту.</p>
+          <p>Подсветки, цитаты и комментарии с переходом к исходному фрагменту.</p>
         </div>
         <div className="notes-heading__actions">
           <Button aria-label="Скопировать всё" disabled={visibleItems.length === 0} onClick={() => void copyVisible()} variant="ghost"><Copy aria-hidden="true" /> Копировать</Button>
@@ -193,7 +193,7 @@ export function NotesPage({ bridge }: NotesPageProps) {
       <section aria-label="Фильтры заметок" className="notes-toolbar">
         <label className="notes-search">
           <Search aria-hidden="true" />
-          <input aria-label="Поиск по заметкам" onChange={(event) => setSearch(event.target.value)} placeholder="Найти мысль или цитату…" type="search" value={search} />
+          <input aria-label="Поиск по заметкам" onChange={(event) => setSearch(event.target.value)} placeholder="Текст заметки или цитаты" type="search" value={search} />
         </label>
         <label><span>Тип заметки</span><select onChange={(event) => setKind(event.target.value as KindFilter)} value={kind}><option value="all">Все типы</option><option value="highlight">Подсветки</option><option value="note">Заметки</option><option value="quote">Цитаты</option></select></label>
         <label><span>Книга</span><select onChange={(event) => setWorkId(event.target.value)} value={workId}><option value="all">Все книги</option>{works.map((work) => <option key={work.id} value={work.id}>{work.title}</option>)}</select></label>
@@ -202,10 +202,10 @@ export function NotesPage({ bridge }: NotesPageProps) {
 
       {error ? <div className="notice notice--error" role="alert">{error}</div> : null}
       {notice ? <div className="notice notice--success" role="status">{notice}</div> : null}
-      {loading ? <div className="persistent-loading"><span className="spinner" /><p>Собираем заметки…</p></div> : null}
+      {loading ? <div className="persistent-loading"><span className="spinner" /><p>Загружаем заметки…</p></div> : null}
 
       {!loading && visibleItems.length === 0 ? (
-        <div className="filtered-empty"><Search aria-hidden="true" /><p>Для этих фильтров ничего не нашлось.</p><button className="button button--ghost" onClick={() => { setSearch(''); setKind('all'); setWorkId('all'); }} type="button">Сбросить фильтры</button></div>
+        <div className="filtered-empty"><Search aria-hidden="true" /><p>По выбранным фильтрам ничего не найдено.</p><button className="button button--ghost" onClick={() => { setSearch(''); setKind('all'); setWorkId('all'); }} type="button">Сбросить фильтры</button></div>
       ) : null}
 
       {!loading && visibleItems.length > 0 ? (

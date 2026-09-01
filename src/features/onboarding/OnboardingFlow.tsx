@@ -22,16 +22,16 @@ export function OnboardingFlow() {
         {step === 0 ? (
           <div className="onboarding__content onboarding__content--welcome">
             <Mascot className="onboarding__mascot" pose="welcome" />
-            <div><p className="eyebrow">Добро пожаловать</p><h1>Твоя тихая полка</h1><p>Mochi Reader хранит книги, прогресс и заметки локально. Никакого аккаунта и обязательного облака.</p></div>
+            <div><p className="eyebrow">Mochi Reader 2.0</p><h1>Локальная библиотека</h1><p>Книги, прогресс и заметки хранятся на этом компьютере. Регистрация не требуется.</p></div>
           </div>
         ) : null}
         {step === 1 ? (
           <div className="onboarding__content">
-            <p className="eyebrow">Выбери настроение</p><h1>Какой сегодня вечер?</h1>
+            <p className="eyebrow">Оформление</p><h1>Выберите тему</h1>
             <div className="onboarding-themes">
               {(['sakura', 'milk', 'night'] as ThemeName[]).map((option) => (
                 <button aria-pressed={theme === option} data-theme-preview={option} key={option} onClick={() => setTheme(option)} type="button">
-                  <span /><strong>{option === 'sakura' ? 'Sakura Pink' : option === 'milk' ? 'Strawberry Milk' : 'Night Sakura'}</strong>
+                  <span /><strong>{option === 'sakura' ? 'Светлая' : option === 'milk' ? 'Нейтральная' : 'Тёмная'}</strong>
                 </button>
               ))}
             </div>
@@ -39,9 +39,9 @@ export function OnboardingFlow() {
         ) : null}
         {step === 2 ? (
           <div className="onboarding__content">
-            <p className="eyebrow">Последний штрих</p><h1>Добавить библиотеку?</h1><p>Можно выбрать папку сейчас или сделать это позже. Исходные файлы не перемещаются.</p>
+            <p className="eyebrow">Импорт</p><h1>Добавить папку с книгами</h1><p>Папку можно выбрать сейчас или позже. Исходные файлы не перемещаются.</p>
             <Button onClick={() => void libraryStore.getState().importFolder()} variant="secondary"><FolderPlus aria-hidden="true" /> Выбрать папку</Button>
-            <div className="privacy-note"><ShieldCheck aria-hidden="true" /><span>Reader читает только выбранные тобой файлы.</span></div>
+            <div className="privacy-note"><ShieldCheck aria-hidden="true" /><span>Приложение получает доступ только к выбранным файлам.</span></div>
           </div>
         ) : null}
 

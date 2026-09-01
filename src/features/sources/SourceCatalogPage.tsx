@@ -127,16 +127,16 @@ export function SourceCatalogPage({ bridge }: SourceCatalogPageProps) {
       {!submittedQuery && !searching ? (
         <section className="source-catalog-empty">
           <Sparkles aria-hidden="true" />
-          <h2>Что хочется почитать сегодня?</h2>
-          <p>Введи название — результаты появятся здесь уютной полкой.</p>
+          <h2>Поиск по каталогу</h2>
+          <p>Введите название, автора или серию.</p>
         </section>
       ) : null}
 
       {submittedQuery && !searching && items.length === 0 && !error ? (
         <section className="source-catalog-empty">
           <BookOpen aria-hidden="true" />
-          <h2>Ничего не нашлось</h2>
-          <p>Попробуй другое название или более короткий запрос.</p>
+          <h2>Ничего не найдено</h2>
+          <p>Измените название или сократите запрос.</p>
         </section>
       ) : null}
 
@@ -247,5 +247,5 @@ function sourceError(reason: unknown) {
   if (typeof reason === 'object' && reason !== null && 'userMessage' in reason) {
     return String(reason.userMessage);
   }
-  return 'Не удалось выполнить поиск. Проверь источник и попробуй снова.';
+  return 'Не удалось выполнить поиск. Проверьте источник и повторите попытку.';
 }

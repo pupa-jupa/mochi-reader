@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpen, Feather, Heart, Plus, Sparkles } from 'lucide-react';
+import { ArrowRight, BookOpen, Database, Feather, Plus, Sparkles } from 'lucide-react';
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from 'zustand';
@@ -24,17 +24,17 @@ export function DashboardPage() {
 
   return (
     <div className="page dashboard-page">
-      <section aria-label="Страница читательского дневника" className="journal-hero">
+      <section aria-label="Текущая книга" className="journal-hero">
         <div aria-hidden="true" className="journal-hero__folio">01</div>
         <div aria-hidden="true" className="journal-hero__ribbon">сегодня</div>
         <div className="journal-hero__copy">
           <p className="journal-date"><Feather aria-hidden="true" /> {today}</p>
-          <p className="eyebrow"><Sparkles aria-hidden="true" /> Личный читательский дневник</p>
-          <h1>{reading ? reading.title : 'Какая история станет первой?'}</h1>
+          <p className="eyebrow"><Sparkles aria-hidden="true" /> Текущая книга</p>
+          <h1>{reading ? reading.title : 'Библиотека пуста'}</h1>
           <p className="journal-hero__subtitle">
             {reading
-              ? `${reading.author || 'Автор не указан'} · книга терпеливо держит твою закладку.`
-              : 'Добавь книгу или мангу — здесь появится твоя первая живая страница.'}
+              ? `${reading.author || 'Автор не указан'} · прогресс сохранён автоматически.`
+              : 'Добавьте книгу, мангу или папку с файлами, чтобы начать чтение.'}
           </p>
           {reading ? (
             <div className="journal-progress">
@@ -47,7 +47,7 @@ export function DashboardPage() {
               >
                 <span style={{ width: `${Math.min(100, Math.max(0, readingProgress))}%` }} />
               </div>
-              <small>{readingProgress}% истории уже с тобой</small>
+              <small>Прочитано: {readingProgress}%</small>
             </div>
           ) : null}
           <div className="journal-hero__actions">
@@ -57,10 +57,10 @@ export function DashboardPage() {
               </Link>
             ) : (
               <Button onClick={() => void libraryStore.getState().importFiles()}>
-                <Plus aria-hidden="true" /> Добавить первую книгу
+                <Plus aria-hidden="true" /> Добавить книги
               </Button>
             )}
-            <Link className="text-link" to="/library">Перейти к полке <ArrowRight aria-hidden="true" /></Link>
+            <Link className="text-link" to="/library">Открыть библиотеку <ArrowRight aria-hidden="true" /></Link>
           </div>
         </div>
         <div aria-hidden="true" className="journal-hero__botanical"><i /><i /><i /></div>
@@ -68,19 +68,19 @@ export function DashboardPage() {
       </section>
 
       <section aria-label="Сводка библиотеки" className="journal-marginalia">
-        <div className="journal-marginalia__heading"><span>маленькие итоги</span><strong>Моя полка в цифрах</strong></div>
+        <div className="journal-marginalia__heading"><span>Статистика</span><strong>Библиотека</strong></div>
         <dl>
-          <div><dt>на полке</dt><dd>{total}</dd></div>
-          <div><dt>читаю сейчас</dt><dd>{items.filter((item) => item.status === 'reading').length}</dd></div>
-          <div><dt>любимых историй</dt><dd>{items.filter((item) => item.favorite).length}</dd></div>
+          <div><dt>всего</dt><dd>{total}</dd></div>
+          <div><dt>читаю</dt><dd>{items.filter((item) => item.status === 'reading').length}</dd></div>
+          <div><dt>избранное</dt><dd>{items.filter((item) => item.favorite).length}</dd></div>
         </dl>
-        <div className="journal-marginalia__note"><Heart aria-hidden="true" /><span>Читать медленно — тоже красиво.</span></div>
+        <div className="journal-marginalia__note"><Database aria-hidden="true" /><span>Данные хранятся локально.</span></div>
       </section>
 
       {items.length > 0 ? (
         <section className="dashboard-section journal-shelf">
           <div className="section-heading">
-            <div><p className="eyebrow">Свежие закладки</p><h2>Недавно на полке</h2></div>
+            <div><p className="eyebrow">Недавние</p><h2>Последние добавленные</h2></div>
             <Link className="text-link" to="/library">Смотреть все <ArrowRight aria-hidden="true" /></Link>
           </div>
           <div className="library-grid library-grid--compact">
@@ -90,9 +90,9 @@ export function DashboardPage() {
         </section>
       ) : (
         <section className="reading-note">
-          <div className="reading-note__mark">“</div>
-          <blockquote>Книга — это тихий разговор, который можно продолжить в любой вечер.</blockquote>
-          <p>Пока библиотека пуста, здесь будет немного воздуха.</p>
+          <div className="reading-note__mark">i</div>
+          <blockquote>Недавние книги появятся после первого импорта.</blockquote>
+          <p>Поддерживаются локальные файлы, папки и подключённые каталоги.</p>
         </section>
       )}
     </div>

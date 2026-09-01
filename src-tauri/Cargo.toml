@@ -1,7 +1,7 @@
 [package]
 name = "mochi-reader"
 version = "2.0.0"
-description = "A cozy local reader for books and manga"
+description = "A local desktop reader for books and manga"
 authors = ["Mochi Reader contributors"]
 edition = "2024"
 rust-version = "1.88"

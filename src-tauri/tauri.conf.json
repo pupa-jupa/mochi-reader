@@ -37,8 +37,8 @@
     "active": true,
     "targets": ["nsis"],
     "category": "Reference",
-    "shortDescription": "A cozy local reader for books and manga",
-    "longDescription": "Mochi Reader is a private local-first Windows reader for electronic books, manga archives, image folders, PDF documents and compatible online manga sources.",
+    "shortDescription": "Local desktop reader for books and manga",
+    "longDescription": "Mochi Reader is a local-first Windows reader for electronic books, manga archives, image folders, PDF documents and compatible online manga sources.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

@@ -160,7 +160,7 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
         <div>
           <p className="eyebrow">{collection.itemCount} произведений</p>
           <h1>{collection.title}</h1>
-          <p>{collection.description ?? 'Личная подборка Mochi Reader'}</p>
+          <p>{collection.description ?? 'Описание не указано'}</p>
         </div>
         <div className="collection-details-actions">
           <label>
@@ -194,8 +194,8 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
       {items.length === 0 ? (
         <section className="section-empty section-empty--compact">
           <div className="section-empty__icon"><FolderHeart aria-hidden="true" /></div>
-          <h2>На этой полке пока пусто</h2>
-          <p>Открой произведение в библиотеке и добавь его в эту коллекцию.</p>
+          <h2>Коллекция пуста</h2>
+          <p>Откройте произведение в библиотеке и добавьте его в коллекцию.</p>
           <Link className="button button--secondary" to="/library"><Library aria-hidden="true" /> Открыть библиотеку</Link>
         </section>
       ) : (

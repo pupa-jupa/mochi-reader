@@ -52,13 +52,16 @@ import {
 } from '../../utils/annotationLocator';
 
 type ReaderTheme = 'paper' | 'sakura' | 'night';
-type FontFamily = 'serif' | 'sans';
+type FontFamily = 'serif' | 'sans' | 'mono';
 
 interface ReaderPreferences {
   fontSize: number;
   lineHeight: number;
   contentWidth: number;
   fontFamily: FontFamily;
+  letterSpacing: number;
+  paragraphIndent: number;
+  paragraphSpacing: number;
   justified: boolean;
   theme: ReaderTheme;
 }
@@ -68,6 +71,9 @@ const defaultPreferences: ReaderPreferences = {
   lineHeight: 1.85,
   contentWidth: 760,
   fontFamily: 'serif',
+  letterSpacing: 0,
+  paragraphIndent: 0,
+  paragraphSpacing: 0.7,
   justified: false,
   theme: 'paper',
 };
@@ -83,7 +89,10 @@ function loadPreferences(): ReaderPreferences {
       fontSize: Math.min(34, Math.max(14, value.fontSize ?? defaultPreferences.fontSize)),
       lineHeight: Math.min(2.3, Math.max(1.3, value.lineHeight ?? defaultPreferences.lineHeight)),
       contentWidth: Math.min(1100, Math.max(520, value.contentWidth ?? defaultPreferences.contentWidth)),
-      fontFamily: value.fontFamily === 'sans' ? 'sans' : 'serif',
+      fontFamily: value.fontFamily === 'sans' || value.fontFamily === 'mono' ? value.fontFamily : 'serif',
+      letterSpacing: Math.min(0.08, Math.max(-0.02, value.letterSpacing ?? defaultPreferences.letterSpacing)),
+      paragraphIndent: Math.min(3, Math.max(0, value.paragraphIndent ?? defaultPreferences.paragraphIndent)),
+      paragraphSpacing: Math.min(2, Math.max(0, value.paragraphSpacing ?? defaultPreferences.paragraphSpacing)),
       justified: Boolean(value.justified),
       theme: value.theme === 'night' || value.theme === 'sakura' ? value.theme : 'paper',
     };
@@ -96,7 +105,7 @@ function errorMessage(error: unknown) {
   if (typeof error === 'object' && error !== null && 'userMessage' in error) {
     return String(error.userMessage);
   }
-  return 'Не удалось открыть произведение. Проверь исходный файл и попробуй снова.';
+  return 'Не удалось открыть произведение. Проверьте исходный файл и повторите попытку.';
 }
 
 export function BookReaderPage() {
@@ -135,7 +144,7 @@ export function BookReaderPage() {
     return (
       <div aria-label="Открываем книгу" className="reader-loading">
         <span className="spinner" />
-        <p>Готовим страницы…</p>
+        <p>Загружаем книгу…</p>
       </div>
     );
   }
@@ -601,6 +610,9 @@ export function BookReader({
     '--reader-font-size': `${preferences.fontSize}px`,
     '--reader-line-height': String(preferences.lineHeight),
     '--reader-content-width': `${preferences.contentWidth}px`,
+    '--reader-letter-spacing': `${preferences.letterSpacing}em`,
+    '--reader-paragraph-indent': `${preferences.paragraphIndent}em`,
+    '--reader-paragraph-spacing': `${preferences.paragraphSpacing}em`,
   } as CSSProperties;
 
   return (
@@ -621,7 +633,7 @@ export function BookReader({
           <button aria-label="Добавить закладку" className="reader-tool" onClick={() => saveBookmark()} type="button"><Bookmark aria-hidden="true" /></button>
           <button aria-label="Заметки" aria-pressed={annotationsOpen} className="reader-tool" onClick={() => { setAnnotationsOpen((value) => !value); setTocOpen(false); setSettingsOpen(false); }} type="button"><StickyNote aria-hidden="true" /></button>
           <button aria-label="Полный экран" className="reader-tool" onClick={() => void toggleFullscreen()} type="button"><Maximize2 aria-hidden="true" /></button>
-          <button aria-label="Настройки чтения" className="reader-tool" onClick={() => { setSettingsOpen((value) => !value); setAnnotationsOpen(false); setTocOpen(false); }} type="button"><Settings2 aria-hidden="true" /></button>
+          <button aria-label="Настройки текста" className="reader-tool" onClick={() => { setSettingsOpen((value) => !value); setAnnotationsOpen(false); setTocOpen(false); }} type="button"><Settings2 aria-hidden="true" /></button>
         </div>
       </header>
 
@@ -669,7 +681,7 @@ export function BookReader({
               autoFocus
               maxLength={2000}
               onChange={(event) => setSelectionNoteDraft(event.target.value)}
-              placeholder="Что хочется запомнить?"
+              placeholder="Комментарий к фрагменту"
               rows={3}
               value={selectionNoteDraft}
             />
@@ -720,7 +732,7 @@ export function BookReader({
               })}
             </div>
           ) : (
-            <div className="reader-annotations__empty"><StickyNote aria-hidden="true" /><p>Выдели текст, чтобы сохранить первую мысль.</p></div>
+            <div className="reader-annotations__empty"><StickyNote aria-hidden="true" /><p>Выделите текст, чтобы создать заметку или цитату.</p></div>
           )}
         </aside>
       ) : null}
@@ -748,14 +760,18 @@ export function BookReader({
       </div>
 
       {settingsOpen ? (
-        <aside aria-label="Настройки чтения" className="reader-settings">
-          <div className="reader-settings__heading"><strong>Настройки чтения</strong><button aria-label="Закрыть настройки" onClick={() => setSettingsOpen(false)} type="button"><X aria-hidden="true" /></button></div>
+        <aside aria-label="Настройки текста" className="reader-settings">
+          <div className="reader-settings__heading"><strong>Настройки текста</strong><button aria-label="Закрыть настройки" onClick={() => setSettingsOpen(false)} type="button"><X aria-hidden="true" /></button></div>
           <section><span>Размер текста</span><div className="reader-stepper"><button aria-label="Уменьшить текст" onClick={() => updatePreferences({ fontSize: Math.max(14, preferences.fontSize - 1) })} type="button"><Minus aria-hidden="true" /></button><output>{preferences.fontSize}</output><button aria-label="Увеличить текст" onClick={() => updatePreferences({ fontSize: Math.min(34, preferences.fontSize + 1) })} type="button"><Plus aria-hidden="true" /></button></div></section>
           <label><span>Межстрочный интервал</span><input max="2.3" min="1.3" onChange={(event) => updatePreferences({ lineHeight: Number(event.target.value) })} step="0.05" type="range" value={preferences.lineHeight} /></label>
           <label><span>Ширина страницы</span><input max="1100" min="520" onChange={(event) => updatePreferences({ contentWidth: Number(event.target.value) })} step="20" type="range" value={preferences.contentWidth} /></label>
-          <section><span>Шрифт</span><div className="reader-segments"><button aria-pressed={preferences.fontFamily === 'serif'} onClick={() => updatePreferences({ fontFamily: 'serif' })} type="button">С засечками</button><button aria-pressed={preferences.fontFamily === 'sans'} onClick={() => updatePreferences({ fontFamily: 'sans' })} type="button">Без засечек</button></div></section>
+          <label><span>Интервал между абзацами</span><input aria-label="Интервал между абзацами" max="2" min="0" onChange={(event) => updatePreferences({ paragraphSpacing: Number(event.target.value) })} step="0.1" type="range" value={preferences.paragraphSpacing} /><output>{preferences.paragraphSpacing.toFixed(1)} em</output></label>
+          <label><span>Отступ первой строки</span><input aria-label="Отступ первой строки" max="3" min="0" onChange={(event) => updatePreferences({ paragraphIndent: Number(event.target.value) })} step="0.1" type="range" value={preferences.paragraphIndent} /><output>{preferences.paragraphIndent.toFixed(1)} em</output></label>
+          <label><span>Межбуквенный интервал</span><input aria-label="Межбуквенный интервал" max="0.08" min="-0.02" onChange={(event) => updatePreferences({ letterSpacing: Number(event.target.value) })} step="0.01" type="range" value={preferences.letterSpacing} /><output>{preferences.letterSpacing.toFixed(2)} em</output></label>
+          <section><span>Шрифт</span><div className="reader-segments reader-segments--fonts"><button aria-pressed={preferences.fontFamily === 'serif'} onClick={() => updatePreferences({ fontFamily: 'serif' })} type="button">Книжный</button><button aria-pressed={preferences.fontFamily === 'sans'} onClick={() => updatePreferences({ fontFamily: 'sans' })} type="button">Без засечек</button><button aria-pressed={preferences.fontFamily === 'mono'} onClick={() => updatePreferences({ fontFamily: 'mono' })} type="button">Моноширинный</button></div></section>
           <section><span>Фон</span><div className="reader-themes">{(['paper', 'sakura', 'night'] as ReaderTheme[]).map((theme) => <button aria-label={theme} aria-pressed={preferences.theme === theme} data-reader-theme-preview={theme} key={theme} onClick={() => updatePreferences({ theme })} type="button" />)}</div></section>
           <label className="reader-toggle"><span><Columns3 aria-hidden="true" /> Выравнивать по ширине</span><input checked={preferences.justified} onChange={(event) => updatePreferences({ justified: event.target.checked })} type="checkbox" /></label>
+          <button aria-label="Сбросить настройки текста" className="reader-settings__reset" onClick={() => setPreferences(defaultPreferences)} type="button">Сбросить настройки</button>
         </aside>
       ) : null}
 

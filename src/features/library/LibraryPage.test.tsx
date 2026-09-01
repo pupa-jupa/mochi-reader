@@ -89,7 +89,7 @@ describe('library page', () => {
 
     expect(screen.getByRole('button', { name: 'Добавить книги' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Добавить папку' })).toBeEnabled();
-    expect(screen.getByText('Здесь пока тихо')).toBeVisible();
+    expect(screen.getByText('Библиотека пуста')).toBeVisible();
   });
 
   it('loads a route filter through the native query before pagination', async () => {

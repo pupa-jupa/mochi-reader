@@ -19,12 +19,12 @@ interface LibraryPageProps {
 }
 
 const pageCopy: Record<LibraryFilter, { eyebrow: string; title: string; empty: string }> = {
-  all: { eyebrow: 'Твоя полка', title: 'Библиотека', empty: 'Книги и манга живут вместе' },
+  all: { eyebrow: 'Все файлы', title: 'Библиотека', empty: 'Добавьте книги или мангу' },
   reading: { eyebrow: 'Продолжить', title: 'Сейчас читаю', empty: 'Активных чтений пока нет' },
-  completed: { eyebrow: 'Прочитано', title: 'Завершено', empty: 'Завершённых историй пока нет' },
-  book: { eyebrow: 'Твоя полка', title: 'Книги', empty: 'Добавь первую книгу' },
-  manga: { eyebrow: 'Твоя полка', title: 'Манга', empty: 'Добавь первую мангу' },
-  favorite: { eyebrow: 'Особая полка', title: 'Избранное', empty: 'Отметь любимые произведения сердцем' },
+  completed: { eyebrow: 'Прочитано', title: 'Завершено', empty: 'Завершённых произведений нет' },
+  book: { eyebrow: 'Форматы книг', title: 'Книги', empty: 'Добавьте книгу' },
+  manga: { eyebrow: 'Графические форматы', title: 'Манга', empty: 'Добавьте мангу' },
+  favorite: { eyebrow: 'Отмеченные', title: 'Избранное', empty: 'В избранном пока ничего нет' },
 };
 
 export function LibraryPage({ store = libraryStore, initialFilter = 'all' }: LibraryPageProps) {
@@ -79,7 +79,7 @@ export function LibraryPage({ store = libraryStore, initialFilter = 'all' }: Lib
         <div>
           <p className="eyebrow">{copy.eyebrow}</p>
           <h1>{copy.title}</h1>
-          <p>{total > 0 ? `${total} произведений ждут своего вечера` : copy.empty}</p>
+          <p>{total > 0 ? `Произведений: ${total}` : copy.empty}</p>
         </div>
         {total > 0 ? (
           <div className="heading-actions">
@@ -134,7 +134,7 @@ export function LibraryPage({ store = libraryStore, initialFilter = 'all' }: Lib
       {status === 'importing' ? (
         <div aria-live="polite" className="notice notice--progress">
           <span className="spinner" />
-          Бережно раскладываем файлы по полкам…
+          Импортируем файлы…
         </div>
       ) : null}
       {error ? (
@@ -176,9 +176,9 @@ export function LibraryPage({ store = libraryStore, initialFilter = 'all' }: Lib
               </Button>
             </>
           }
-          description={routeQuery ? 'Попробуй другое название или очисти поиск.' : 'Добавь первую книгу, мангу или целую папку — исходные файлы останутся на месте.'}
+          description={routeQuery ? 'Измените запрос или очистите поиск.' : 'Добавьте отдельные файлы или папку. Исходные файлы не перемещаются.'}
           pose="empty-library"
-          title={routeQuery ? 'Ничего не нашлось' : 'Здесь пока тихо'}
+          title={routeQuery ? 'Ничего не найдено' : 'Библиотека пуста'}
         />
       ) : null}
 
@@ -213,8 +213,8 @@ export function LibraryPage({ store = libraryStore, initialFilter = 'all' }: Lib
       {items.length > 0 && visibleItems.length === 0 ? (
         <section className="filtered-empty">
           <Library aria-hidden="true" />
-          <h2>На этой полке пока пусто</h2>
-          <p>Выбери другой фильтр или добавь произведение в избранное.</p>
+          <h2>Нет произведений</h2>
+          <p>Измените фильтр или добавьте произведение в избранное.</p>
           <Button onClick={() => updateRoute({ filter: 'all' })} variant="secondary">Показать всё</Button>
         </section>
       ) : null}

@@ -33,7 +33,7 @@ describe('today reading journal', () => {
       </MemoryRouter>,
     );
 
-    const journal = screen.getByRole('region', { name: 'Страница читательского дневника' });
+    const journal = screen.getByRole('region', { name: 'Текущая книга' });
     expect(within(journal).getByRole('heading', { name: 'Лунные письма' })).toBeVisible();
     expect(within(journal).getByRole('link', { name: 'Продолжить чтение' })).toHaveAttribute(
       'href',

@@ -159,9 +159,9 @@ export function SourcesPage({ bridge }: SourcesPageProps) {
     <div className="page sources-page">
       <header className="page-heading">
         <div>
-          <p className="eyebrow">Расширяемая манга-полка</p>
+          <p className="eyebrow">Каталоги и API</p>
           <h1>Онлайн-источники</h1>
-          <p>Встроенный MangaDex API, manifest и HTML-профили без исполняемого кода.</p>
+          <p>MangaDex, OPDS и декларативные профили источников без исполнения стороннего кода.</p>
         </div>
       </header>
       <section className="source-intro">
@@ -239,7 +239,7 @@ export function SourcesPage({ bridge }: SourcesPageProps) {
 
       {loading ? <div className="persistent-loading"><span className="spinner" /><p>Проверяем подключённые адаптеры…</p></div> : null}
       {!loading && sources.length === 0 ? (
-        <section className="sources-empty"><Globe2 aria-hidden="true" /><h2>Источники ещё не подключены</h2><p>Добавь совместимый URL или импортируй профиль сайта.</p></section>
+        <section className="sources-empty"><Globe2 aria-hidden="true" /><h2>Источники не подключены</h2><p>Добавьте совместимый URL или импортируйте профиль источника.</p></section>
       ) : null}
       {sources.length > 0 ? (
         <section aria-label="Подключённые источники" className="source-grid">

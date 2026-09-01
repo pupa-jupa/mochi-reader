@@ -1,29 +1,63 @@
 # Mochi Reader 2.0
 
-Mochi Reader — local-first desktop reader for Windows built with React, TypeScript, Tauri and Rust. Library metadata, progress, history, collections, bookmarks and annotations stay in the local SQLite database.
+Mochi Reader is a local-first desktop reader for Windows. It manages books, manga, reading progress, bookmarks, collections, history, and annotations without requiring an account or cloud service.
 
-## Supported reading formats
+## Features
 
-Built in and routed to a real reader:
+- Local SQLite library with search, filters, sorting, collections, favorites, and metadata editing.
+- Unified readers for reflowable books, PDF documents, image archives, image folders, and remote manga.
+- Persistent progress, reading sessions, bookmarks, highlights, quotes, and notes.
+- Text controls for font, size, line height, content width, paragraph spacing, first-line indent, letter spacing, alignment, and color theme.
+- PDF search, thumbnails, zoom, page fitting, and anchored annotations.
+- Manga page, spread, vertical, and webtoon modes with offline cache controls.
+- Local file import and declarative online catalogs with strict network policies.
 
-- EPUB 2/3;
-- FB2 and FB2 inside ZIP, including UTF-8, UTF-16 and Windows-1251 sources;
-- PDF with PDF.js layout, search, thumbnails and anchored annotations;
-- TXT, HTML/HTM and Markdown;
-- CBZ, ZIP images, image folders, JPG/JPEG, PNG, WEBP and AVIF;
-- remote MangaDex manga;
-- open-access EPUB, PDF, FB2, TXT, HTML and Markdown books from same-origin OPDS acquisitions.
+## Format support
 
-CBR is detected and shown in the library, but opening it currently requires an external UnRAR integration that is not bundled. MOBI, AZW/AZW3, DJVU, DOCX and DRM-encrypted publications are not advertised as supported.
+| Format | Support |
+| --- | --- |
+| EPUB 2/3 | Built-in reflowable reader |
+| FB2, FB2.ZIP | Built-in reader; UTF-8, UTF-16, Windows-1251, legacy entity and markup compatibility |
+| PDF | PDF.js reader with text search and annotations |
+| TXT, HTML, HTM, Markdown | Built-in reflowable reader |
+| CBZ, ZIP images, image folders | Built-in manga reader |
+| JPG, JPEG, PNG, WEBP, AVIF | Built-in image reader |
+| MangaDex | Built-in read-only API adapter |
+| OPDS 1.x and 2.0 | Open-access EPUB, PDF, FB2, TXT, HTML, and Markdown acquisitions |
+| CBR | Detected but not opened; an UnRAR implementation is not bundled |
+| MOBI, AZW, AZW3, DJVU, DOCX, DRM publications | Not supported |
+
+## Online sources
+
+The application supports three source types:
+
+- the compiled MangaDex adapter;
+- OPDS 1.x and 2.0 catalogs;
+- declarative JSON/REST or legacy HTML profiles.
+
+Source profiles cannot execute JavaScript. Network requests enforce HTTPS, origin restrictions, response-size limits, timeouts, and private-address blocking. The application does not bypass authentication, CAPTCHA, paywalls, anti-bot systems, or DRM.
+
+See [source adapter documentation](docs/manga-source-adapters.md), [Mochi Source Manifest v1](docs/source-manifest.md), and [privacy and security](docs/privacy-and-security.md).
+
+## Technology
+
+- React 19 and TypeScript 6
+- Tauri 2
+- Rust
+- SQLite
+- Vite and Vitest
+- PDF.js
+
+The React frontend contains the application shell and readers. Rust handles file detection, parsing, persistence, cache management, source adapters, and operating-system integration.
 
 ## Development
 
-Prerequisites:
+Requirements:
 
 - Windows 10 or 11 with WebView2;
 - Node.js 24;
 - pnpm 11.19.0;
-- Rust stable with the Windows MSVC toolchain;
+- stable Rust with the Windows MSVC toolchain;
 - Visual Studio Build Tools with Desktop development with C++.
 
 ```powershell
@@ -31,7 +65,7 @@ pnpm install --frozen-lockfile
 pnpm tauri dev
 ```
 
-Quality gates:
+Run the verification suite:
 
 ```powershell
 pnpm lint
@@ -42,25 +76,16 @@ cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -
 cargo test --manifest-path src-tauri/Cargo.toml --all-features --locked
 ```
 
-Build an unsigned current-user NSIS installer:
+Build the Windows installer:
 
 ```powershell
 pnpm tauri build --ci --bundles nsis
 ```
 
-The installer is written below `src-tauri/target/release/bundle/nsis/`.
-
-## Online catalogs
-
-- MangaDex is a compiled built-in Rust adapter.
-- OPDS 1.x and 2.0 catalogs can be checked, previewed and connected by URL.
-- JSON/REST manga catalogs use the declarative [Mochi Source Manifest v1](docs/source-manifest.md).
-- Legacy HTML profiles contain only URL templates and CSS selectors.
-
-No source can execute JavaScript inside Mochi Reader. Network adapters enforce HTTPS, origin boundaries, response limits, timeouts and private-address blocking. Mochi Reader does not bypass login, CAPTCHA, paywalls, anti-bot systems or DRM. See [privacy and security](docs/privacy-and-security.md) and [source adapter details](docs/manga-source-adapters.md).
+The unsigned current-user NSIS installer is written to `src-tauri/target/release/bundle/nsis/`.
 
 ## Releases
 
-CI verifies frontend and Rust gates and builds the Windows NSIS package. Pushing a tag matching the application version, for example `v2.0.0`, creates a draft GitHub release and uploads the installer. Drafts are intentionally not published automatically; review and sign the Windows binary before public distribution.
+CI runs the frontend and Rust verification gates and builds the Windows installer. A tag matching the application version creates a draft GitHub release with the installer and `SHA256SUMS.txt`. Drafts require manual review before publication.
 
-The draft also includes `SHA256SUMS.txt`. The workflow uses least-privilege `GITHUB_TOKEN` permissions and pins every external action to a full commit SHA. The latest local release evidence is recorded in [docs/release-verification.md](docs/release-verification.md).
+Local release evidence is recorded in [docs/release-verification.md](docs/release-verification.md).

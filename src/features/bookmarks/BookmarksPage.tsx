@@ -35,7 +35,7 @@ export function BookmarksPage({ bridge }: BookmarksPageProps) {
       await api.deleteBookmark(id);
       setItems((current) => current.filter((item) => item.id !== id));
     } catch {
-      setError('Не удалось удалить закладку. Попробуй ещё раз.');
+      setError('Не удалось удалить закладку. Повторите попытку.');
     }
   }
 
@@ -43,8 +43,8 @@ export function BookmarksPage({ bridge }: BookmarksPageProps) {
     return (
       <SectionEmpty
         action={{ label: 'Открыть библиотеку', to: '/library' }}
-        description="Во время чтения нажми Ctrl+B, чтобы сохранить текущую позицию. Выделения и мысли живут в разделе «Заметки»."
-        eyebrow="Важные места"
+        description="Во время чтения нажмите Ctrl+B, чтобы сохранить текущую позицию. Выделения и комментарии доступны в разделе «Заметки»."
+        eyebrow="Сохранённые позиции"
         icon={Bookmark}
         title="Закладки"
       />
@@ -54,7 +54,7 @@ export function BookmarksPage({ bridge }: BookmarksPageProps) {
   return (
     <div className="page simple-page persistent-page">
       <header className="page-heading">
-        <div><p className="eyebrow">Важные места</p><h1>Закладки</h1><p>Сохранённые позиции остаются на этом устройстве.</p></div>
+        <div><p className="eyebrow">Сохранённые позиции</p><h1>Закладки</h1><p>Закладки хранятся локально на этом устройстве.</p></div>
       </header>
       {error ? <div className="notice notice--error" role="alert">{error}</div> : null}
       {loading ? <LoadingState label="Загружаем закладки…" /> : null}

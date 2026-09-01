@@ -53,7 +53,7 @@ function loadSavedIndex(workId: string, total: number) {
 
 function mangaError(error: unknown) {
   if (typeof error === 'object' && error !== null && 'userMessage' in error) return String(error.userMessage);
-  return 'Не удалось открыть страницы манги. Проверь архив или папку.';
+  return 'Не удалось открыть страницы манги. Проверьте архив или папку.';
 }
 
 function ignorePersistenceFailure(promise: Promise<unknown> | undefined) {
@@ -107,7 +107,7 @@ export function MangaReaderPage() {
       </div>
     );
   }
-  if (!manifest) return <div aria-label="Открываем мангу" className="manga-loading"><span className="spinner" /><p>Собираем страницы…</p></div>;
+  if (!manifest) return <div aria-label="Открываем мангу" className="manga-loading"><span className="spinner" /><p>Загружаем страницы…</p></div>;
   return (
     <MangaReader
       createBookmark={desktopBridge.createBookmark}

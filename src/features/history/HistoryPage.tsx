@@ -63,9 +63,9 @@ export function HistoryPage({ bridge }: HistoryPageProps) {
   if (!loading && items.length === 0 && !error) {
     return (
       <SectionEmpty
-        action={{ label: 'Найти, что почитать', to: '/library' }}
-        description="Здесь появятся главы и страницы, которые ты открывал. История хранится только на этом устройстве."
-        eyebrow="Недавнее чтение"
+        action={{ label: 'Открыть библиотеку', to: '/library' }}
+        description="Открытые главы и страницы появятся здесь. История хранится только на этом устройстве."
+        eyebrow="Последние сеансы"
         icon={Clock3}
         title="История пока пуста"
       />
@@ -76,7 +76,7 @@ export function HistoryPage({ bridge }: HistoryPageProps) {
     <div className="page simple-page persistent-page">
       <header className="page-heading">
         <div>
-          <p className="eyebrow">Недавнее чтение</p>
+          <p className="eyebrow">Последние сеансы</p>
           <h1>История</h1>
           <p>Последние позиции и время чтения. Всё хранится только на этом устройстве.</p>
         </div>
@@ -100,7 +100,7 @@ export function HistoryPage({ bridge }: HistoryPageProps) {
       ) : null}
       {error ? <div className="notice notice--error" role="alert">{error}</div> : null}
       {loading ? (
-        <div className="persistent-loading"><span className="spinner" /><p>Собираем недавнее…</p></div>
+        <div className="persistent-loading"><span className="spinner" /><p>Загружаем историю…</p></div>
       ) : null}
       {!loading ? (
         <div className="history-groups">

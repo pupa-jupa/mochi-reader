@@ -17,7 +17,10 @@ use fb2::{
     FictionBook, Image, InlineImage, Link, Paragraph, Poem, PoemStanza, Section, SectionPart,
     StyleElement, StyleLinkElement, Table, TableCellElement, Title, TitleElement,
 };
-use quick_xml::{Reader, events::Event};
+use quick_xml::{
+    Reader, Writer,
+    events::{BytesText, Event},
+};
 use zip::ZipArchive;
 
 use crate::domain::error::{AppError, AppResult};
@@ -32,15 +35,97 @@ const MAX_EMBEDDED_IMAGE_BYTES: usize = 24 * 1024 * 1024;
 
 pub fn parse(path: &Path) -> AppResult<ParsedBook> {
     let bytes = read_fb2_bytes(path)?;
-    let xml = decode_fb2(&bytes)?;
+    let xml = normalize_legacy_entities(decode_fb2(&bytes)?);
     validate_xml(&xml)?;
-    let book: FictionBook = quick_xml::de::from_str(&xml).map_err(|_| AppError::Validation {
-        message:
-            "Не получилось открыть FB2. Структура FictionBook повреждена или не поддерживается."
-                .to_string(),
-    })?;
+    let compatible_xml = normalize_legacy_structure(&xml)?;
+    let book: FictionBook =
+        quick_xml::de::from_str(&compatible_xml).map_err(|_| AppError::Validation {
+            message:
+                "Не получилось открыть FB2. Структура FictionBook повреждена или не поддерживается."
+                    .to_string(),
+        })?;
 
     parsed_book(path, &book)
+}
+
+fn normalize_legacy_structure(xml: &str) -> AppResult<String> {
+    let mut reader = Reader::from_str(xml);
+    let mut writer = Writer::new(Vec::with_capacity(xml.len()));
+    let mut ignored_depth = 0usize;
+
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(_)) if ignored_depth > 0 => ignored_depth += 1,
+            Ok(Event::Start(event)) if event.local_name().as_ref() == b"genre" => {
+                ignored_depth = 1;
+            }
+            Ok(Event::End(_)) if ignored_depth > 0 => ignored_depth -= 1,
+            Ok(Event::Empty(event))
+                if ignored_depth > 0 || event.local_name().as_ref() == b"genre" => {}
+            Ok(Event::Start(event)) if is_legacy_inline_wrapper(event.local_name().as_ref()) => {}
+            Ok(Event::End(event)) if is_legacy_inline_wrapper(event.local_name().as_ref()) => {}
+            Ok(Event::Empty(event)) if is_legacy_inline_wrapper(event.local_name().as_ref()) => {}
+            Ok(Event::Start(event)) if event.local_name().as_ref() == b"br" => {
+                writer
+                    .write_event(Event::Text(BytesText::new(" ")))
+                    .map_err(|_| AppError::Validation {
+                        message: "Не удалось подготовить структуру FB2 к чтению.".to_string(),
+                    })?;
+            }
+            Ok(Event::End(event)) if event.local_name().as_ref() == b"br" => {}
+            Ok(Event::Empty(event)) if event.local_name().as_ref() == b"br" => {
+                writer
+                    .write_event(Event::Text(BytesText::new(" ")))
+                    .map_err(|_| AppError::Validation {
+                        message: "Не удалось подготовить структуру FB2 к чтению.".to_string(),
+                    })?;
+            }
+            Ok(Event::Eof) => break,
+            Ok(event) if ignored_depth == 0 => {
+                writer
+                    .write_event(event)
+                    .map_err(|_| AppError::Validation {
+                        message: "Не удалось подготовить метаданные FB2 к чтению.".to_string(),
+                    })?;
+            }
+            Ok(_) => {}
+            Err(_) => {
+                return Err(AppError::Validation {
+                    message: "Не удалось подготовить метаданные FB2 к чтению.".to_string(),
+                });
+            }
+        }
+    }
+
+    String::from_utf8(writer.into_inner()).map_err(|_| AppError::Validation {
+        message: "Не удалось подготовить метаданные FB2 к чтению.".to_string(),
+    })
+}
+
+fn is_legacy_inline_wrapper(name: &[u8]) -> bool {
+    matches!(name, b"span" | b"font" | b"div")
+}
+
+fn normalize_legacy_entities(mut xml: String) -> String {
+    const ENTITIES: [(&str, &str); 10] = [
+        ("&nbsp;", "\u{a0}"),
+        ("&ndash;", "–"),
+        ("&mdash;", "—"),
+        ("&hellip;", "…"),
+        ("&laquo;", "«"),
+        ("&raquo;", "»"),
+        ("&copy;", "©"),
+        ("&reg;", "®"),
+        ("&trade;", "™"),
+        ("&shy;", "\u{ad}"),
+    ];
+
+    for (entity, replacement) in ENTITIES {
+        if xml.contains(entity) {
+            xml = xml.replace(entity, replacement);
+        }
+    }
+    xml
 }
 
 fn read_fb2_bytes(path: &Path) -> AppResult<Vec<u8>> {

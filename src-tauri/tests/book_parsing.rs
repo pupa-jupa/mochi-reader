@@ -186,6 +186,53 @@ fn fb2_supports_utf8_utf8_bom_utf16_and_windows_1251() {
 }
 
 #[test]
+fn fb2_ignores_unknown_genre_codes_in_metadata() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("unknown-genre.fb2");
+    let source = fb2_document("UTF-8").replace(
+        "<genre>sf</genre>",
+        "<genre>publisher_specific_genre</genre>",
+    );
+    std::fs::write(&path, source).unwrap();
+
+    assert_fb2_book(&path);
+}
+
+#[test]
+fn fb2_accepts_common_html_entities_used_by_legacy_generators() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("legacy-entities.fb2");
+    let source = fb2_document("UTF-8").replace(
+        "Тихий <emphasis>свет</emphasis>.",
+        "Тихий&nbsp;свет&mdash;рядом.",
+    );
+    std::fs::write(&path, source).unwrap();
+
+    let book = parse_book(&path, WorkFormat::Fb2).unwrap();
+
+    assert!(book.chapters[0].html.contains("Тихий\u{a0}свет—рядом."));
+}
+
+#[test]
+fn fb2_unwraps_common_html_tags_from_legacy_converters() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("legacy-html-tags.fb2");
+    let source = fb2_document("UTF-8").replace(
+        "<p>Тихий <emphasis>свет</emphasis>.</p>",
+        "<p>Первая<br/>строка <span class=\"legacy\">и продолжение</span>.</p>",
+    );
+    std::fs::write(&path, source).unwrap();
+
+    let book = parse_book(&path, WorkFormat::Fb2).unwrap();
+
+    assert!(
+        book.chapters[0]
+            .html
+            .contains("Первая строка и продолжение.")
+    );
+}
+
+#[test]
 fn fb2_zip_extracts_the_book_before_parsing() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("Moon.fb2.zip");

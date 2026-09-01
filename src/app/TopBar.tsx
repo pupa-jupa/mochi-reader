@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../stores/settingsStore';
 
 const titles: Record<string, string> = {
-  '/': 'Добрый вечер',
+  '/': 'Обзор',
   '/library': 'Библиотека',
   '/books': 'Книги',
   '/manga': 'Манга',

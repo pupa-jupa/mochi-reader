@@ -45,7 +45,7 @@ export function CollectionsPage({ bridge }: CollectionsPageProps) {
       setFormOpen(false);
       setItems(await api.listCollections());
     } catch {
-      setError('Не удалось создать коллекцию. Проверь название.');
+      setError('Не удалось создать коллекцию. Проверьте название.');
     } finally {
       setSaving(false);
     }
@@ -54,23 +54,23 @@ export function CollectionsPage({ bridge }: CollectionsPageProps) {
   return (
     <div className="page simple-page persistent-page">
       <header className="page-heading">
-        <div><p className="eyebrow">Личные подборки</p><h1>Коллекции</h1><p>Собирай истории по настроению, серии или теме.</p></div>
+        <div><p className="eyebrow">Организация библиотеки</p><h1>Коллекции</h1><p>Группируйте произведения по серии, автору или теме.</p></div>
         <Button aria-label="Новая коллекция" onClick={() => setFormOpen(true)}><Plus aria-hidden="true" /> Новая коллекция</Button>
       </header>
       {error ? <div className="notice notice--error" role="alert">{error}</div> : null}
       {formOpen ? (
         <form className="collection-form" onSubmit={(event) => void submit(event)}>
-          <div><label htmlFor="collection-title">Название коллекции</label><input autoFocus id="collection-title" maxLength={120} onChange={(event) => setTitle(event.target.value)} placeholder="Например, на дождливый вечер" value={title} /></div>
+          <div><label htmlFor="collection-title">Название коллекции</label><input autoFocus id="collection-title" maxLength={120} onChange={(event) => setTitle(event.target.value)} placeholder="Например, научная фантастика" value={title} /></div>
           <Button disabled={saving || !title.trim()} type="submit">{saving ? <span className="spinner" /> : null} Создать</Button>
           <button aria-label="Закрыть форму" className="icon-button" onClick={() => setFormOpen(false)} type="button"><X aria-hidden="true" /></button>
         </form>
       ) : null}
-      {loading ? <div className="persistent-loading"><span className="spinner" /><p>Раскладываем подборки…</p></div> : null}
+      {loading ? <div className="persistent-loading"><span className="spinner" /><p>Загружаем коллекции…</p></div> : null}
       {!loading && items.length === 0 ? (
         <section className="section-empty section-empty--compact">
           <div className="section-empty__icon"><FolderHeart aria-hidden="true" /></div>
-          <h2>Первая коллекция ждёт название</h2>
-          <p>Книга может жить сразу в нескольких подборках, а исходные файлы останутся на месте.</p>
+          <h2>Коллекций пока нет</h2>
+          <p>Одно произведение можно добавить в несколько коллекций. Исходные файлы не изменяются.</p>
           <Button onClick={() => setFormOpen(true)} variant="secondary"><Plus aria-hidden="true" /> Создать коллекцию</Button>
         </section>
       ) : null}
@@ -79,7 +79,7 @@ export function CollectionsPage({ bridge }: CollectionsPageProps) {
           {items.map((collection) => (
             <article className="collection-card" key={collection.id}>
               <div className="collection-card__icon"><FolderHeart aria-hidden="true" /></div>
-              <div><span>{collection.itemCount} {bookWord(collection.itemCount)}</span><h2>{collection.title}</h2><p>{collection.description ?? 'Личная подборка Mochi Reader'}</p></div>
+              <div><span>{collection.itemCount} {bookWord(collection.itemCount)}</span><h2>{collection.title}</h2><p>{collection.description ?? 'Описание не указано'}</p></div>
               <Link className="button button--secondary" to={`/collections/${collection.id}`}><Library aria-hidden="true" /> Открыть коллекцию</Link>
             </article>
           ))}

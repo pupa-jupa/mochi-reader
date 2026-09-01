@@ -648,7 +648,7 @@ export function PdfReader({
               autoFocus
               maxLength={2000}
               onChange={(event) => setSelectionNoteDraft(event.target.value)}
-              placeholder="Что хочется запомнить?"
+              placeholder="Комментарий к фрагменту"
               rows={3}
               value={selectionNoteDraft}
             />
@@ -723,7 +723,7 @@ export function PdfReader({
               })}
             </div>
           ) : (
-            <div className="reader-annotations__empty"><StickyNote aria-hidden="true" /><p>Выдели текст PDF, чтобы сохранить первую мысль.</p></div>
+            <div className="reader-annotations__empty"><StickyNote aria-hidden="true" /><p>Выделите текст PDF, чтобы создать заметку или цитату.</p></div>
           )}
         </aside>
       ) : null}

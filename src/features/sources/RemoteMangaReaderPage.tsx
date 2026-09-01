@@ -145,5 +145,5 @@ function sourceError(reason: unknown) {
   if (typeof reason === 'object' && reason !== null && 'userMessage' in reason) {
     return String(reason.userMessage);
   }
-  return 'Не удалось получить страницы главы. Проверь подключение и источник.';
+  return 'Не удалось получить страницы главы. Проверьте подключение и источник.';
 }
