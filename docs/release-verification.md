@@ -14,6 +14,7 @@ Local verification was completed on Windows x64 on 2026-09-01 from the `codex/mo
 | `cargo clippy --all-targets --all-features --locked -- -D warnings` | passed |
 | `cargo test --all-features --locked -j 1` | 63 tests passed |
 | `pnpm tauri build --ci --bundles nsis` | passed |
+| GitHub Actions CI run `33499181330` | passed on a clean `windows-latest` runner |
 
 The local build produced:
 
@@ -21,6 +22,8 @@ The local build produced:
 - size: 12,091,792 bytes (11.53 MiB);
 - SHA-256: `A715D343C3DD6B840321F912DE127DBE73475F3CDB0E2D1155C1F517F8614AD2`.
 
-This hash identifies the local build only. GitHub Actions produces a fresh artifact and publishes its own `SHA256SUMS.txt` alongside the draft release.
+This hash identifies the local build only. GitHub Actions produces a fresh artifact and publishes its own `SHA256SUMS.txt` alongside the draft release. The successful CI evidence is available at <https://github.com/pupa-jupa/mochi-reader/actions/runs/33499181330>.
 
-The installer is currently unsigned. Successful compilation and packaging were verified; an interactive install/uninstall smoke test was not performed as part of this automated pass.
+The release executable was also rebuilt with the isolated test identifier `app.mochireader.smoke` and launched successfully into the clean first-run onboarding screen. The window was closed normally after capture, and the existing Mochi Reader library was not modified.
+
+The installer is currently unsigned. A complete install/uninstall smoke test was not performed because Mochi Reader 0.1.0 is already installed on this Windows account; overwriting and uninstalling that registered application would risk the existing installation. The NSIS package itself was produced successfully both locally and by GitHub Actions.
