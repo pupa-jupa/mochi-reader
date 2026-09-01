@@ -1036,6 +1036,7 @@ input[type='range'] { accent-color: var(--accent); }
 }
 .manga-reader[data-background='black'] { --manga-bg: #080808; --manga-panel: #171717; --manga-border: #2b2b2b; }
 .manga-reader[data-background='cream'] { --manga-bg: #e9dfd3; --manga-panel: #f9f1e7; --manga-ink: #3e3332; --manga-muted: #786a68; --manga-border: #d1c3b5; }
+.manga-reader[data-mode='vertical'], .manga-reader[data-mode='webtoon'] { grid-template-rows: 58px minmax(0, 1fr); }
 .manga-toolbar {
   z-index: 20;
   display: flex;
@@ -1112,6 +1113,9 @@ input[type='range'] { accent-color: var(--accent); }
 .manga-vertical { padding: 1rem 0 4rem; overflow: auto; }
 .manga-vertical .manga-page { display: grid; width: min(var(--manga-page-width), 100%); min-height: 65vh; place-items: center; margin: 0 auto 0.4rem; }
 .manga-vertical .manga-page img { width: 100%; max-height: none; box-shadow: none; }
+.manga-vertical--webtoon { padding-block: 0 3rem; }
+.manga-vertical--webtoon .manga-page { min-height: 0; margin-bottom: 0; }
+.manga-vertical--webtoon .manga-page__loading, .manga-vertical--webtoon .manga-page__error { width: 100%; min-height: 65vh; border-radius: 0; }
 .manga-footer { z-index: 15; display: grid; align-items: center; gap: 0.7rem; padding: 0 1rem; color: var(--manga-muted); background: var(--manga-panel); border-top: 1px solid var(--manga-border); grid-template-columns: 32px minmax(100px, 1fr) 32px; }
 .manga-footer input { width: min(680px, 100%); justify-self: center; accent-color: var(--accent); }
 .manga-footer span { font-size: 0.62rem; font-variant-numeric: tabular-nums; text-align: center; }
@@ -1413,6 +1417,7 @@ input[type='range'] { accent-color: var(--accent); }
   .chapter-footer button { font-size: 0; }
   .chapter-footer button svg { width: 1.15rem; height: 1.15rem; }
   .manga-reader { grid-template-rows: 56px minmax(0, 1fr) 36px; }
+  .manga-reader[data-mode='vertical'], .manga-reader[data-mode='webtoon'] { grid-template-rows: 56px minmax(0, 1fr); }
   .manga-title span, .manga-zoom { display: none; }
   .manga-toolbar { padding: 0 0.35rem; }
   .manga-modes { margin-left: auto; }

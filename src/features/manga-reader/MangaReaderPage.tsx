@@ -7,6 +7,7 @@ import {
   Maximize2,
   Minus,
   Plus,
+  Rows3,
   Settings2,
   Square,
   X,
@@ -56,6 +57,22 @@ function mangaError(error: unknown) {
 
 function ignorePersistenceFailure(promise: Promise<unknown> | undefined) {
   void promise?.catch(() => undefined);
+}
+
+function isScrollMode(mode: MangaMode) {
+  return mode === 'vertical' || mode === 'webtoon';
+}
+
+function retainedPageIndices(center: number, total: number) {
+  const retained = new Set<number>();
+  for (let pageIndex = center - 4; pageIndex <= center + 4; pageIndex += 1) {
+    if (pageIndex >= 0 && pageIndex < total) retained.add(pageIndex);
+  }
+  return retained;
+}
+
+function releasePageUrl(url: string) {
+  if (url.startsWith('blob:')) globalThis.URL.revokeObjectURL(url);
 }
 
 export function MangaReaderPage() {
@@ -138,27 +155,55 @@ export function MangaReader({
   );
   const [zoom, setZoom] = useState(100);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [bookmarkNotice, setBookmarkNotice] = useState(false);
+  const [readerNotice, setReaderNotice] = useState<string | null>(null);
   const [pages, setPages] = useState<Record<number, string>>({});
   const [pageErrors, setPageErrors] = useState<Record<number, string>>({});
   const pending = useRef(new Set<number>());
+  const pagesRef = useRef(pages);
+  const modeRef = useRef(mode);
+  const mountedRef = useRef(true);
+  const verticalViewportRef = useRef<HTMLElement>(null);
+  const scrollProgressFrameRef = useRef<number | null>(null);
+  const bookmarkTimerRef = useRef<number | null>(null);
   const indexRef = useRef(index);
   indexRef.current = index;
+  pagesRef.current = pages;
+  modeRef.current = mode;
 
   const ensurePage = useCallback(
     async (pageIndex: number) => {
-      if (pages[pageIndex] || pending.current.has(pageIndex)) return;
+      if (pagesRef.current[pageIndex] || pending.current.has(pageIndex)) return;
       pending.current.add(pageIndex);
       try {
         const page = await loadPage(pageIndex);
-        setPages((current) => ({ ...current, [page.index]: page.dataUrl }));
+        if (!mountedRef.current) {
+          releasePageUrl(page.dataUrl);
+          return;
+        }
+        if (!retainedPageIndices(indexRef.current, manifest.pages.length).has(page.index)) {
+          releasePageUrl(page.dataUrl);
+          return;
+        }
+        setPages((current) => {
+          const next = { ...current, [page.index]: page.dataUrl };
+          pagesRef.current = next;
+          return next;
+        });
+        setPageErrors((current) => {
+          if (!(page.index in current)) return current;
+          const next = { ...current };
+          delete next[page.index];
+          return next;
+        });
       } catch (error) {
-        setPageErrors((current) => ({ ...current, [pageIndex]: mangaError(error) }));
+        if (mountedRef.current) {
+          setPageErrors((current) => ({ ...current, [pageIndex]: mangaError(error) }));
+        }
       } finally {
         pending.current.delete(pageIndex);
       }
     },
-    [loadPage, pages],
+    [loadPage, manifest.pages.length],
   );
 
   const visibleIndices = useMemo(
@@ -166,15 +211,101 @@ export function MangaReader({
     [direction, index, manifest.pages.length, mode],
   );
 
+  useEffect(() => {
+    mountedRef.current = true;
+    const cachedPages = pagesRef;
+    const scrollProgressFrame = scrollProgressFrameRef;
+    const bookmarkTimer = bookmarkTimerRef;
+    return () => {
+      mountedRef.current = false;
+      if (scrollProgressFrame.current !== null) {
+        window.cancelAnimationFrame(scrollProgressFrame.current);
+      }
+      if (bookmarkTimer.current !== null) window.clearTimeout(bookmarkTimer.current);
+      Object.values(cachedPages.current).forEach(releasePageUrl);
+      cachedPages.current = {};
+    };
+  }, []);
+
+  function prunePageCache(center: number) {
+    const retained = retainedPageIndices(center, manifest.pages.length);
+    setPages((current) => {
+      let changed = false;
+      const next: Record<number, string> = {};
+      for (const [rawIndex, url] of Object.entries(current)) {
+        const pageIndex = Number(rawIndex);
+        if (retained.has(pageIndex)) next[pageIndex] = url;
+        else {
+          changed = true;
+          releasePageUrl(url);
+        }
+      }
+      pagesRef.current = changed ? next : current;
+      return changed ? next : current;
+    });
+    setPageErrors((current) => {
+      const next = Object.fromEntries(
+        Object.entries(current).filter(([rawIndex]) => retained.has(Number(rawIndex))),
+      );
+      return Object.keys(next).length === Object.keys(current).length ? current : next;
+    });
+  }
+
   function goTo(next: number) {
     const value = safeIndex(next, manifest.pages.length);
+    if (value === indexRef.current) return;
+    indexRef.current = value;
     setIndex(value);
+    prunePageCache(value);
     localStorage.setItem(`mochi-reader:manga-position:${manifest.workId}`, String(value));
     ignorePersistenceFailure(saveProgress?.({
       workId: manifest.workId,
       locator: { kind: 'manga', chapterId, pageIndex: value },
       percent: manifest.pages.length > 0 ? (value + 1) / manifest.pages.length : 0,
     }));
+  }
+
+  function scrollToMangaPage(pageIndex: number) {
+    goTo(pageIndex);
+    window.requestAnimationFrame(() => {
+      verticalViewportRef.current
+        ?.querySelector<HTMLElement>(`[data-manga-page-index='${safeIndex(pageIndex, manifest.pages.length)}']`)
+        ?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    });
+  }
+
+  function changeMode(nextMode: MangaMode) {
+    setMode(nextMode);
+    modeRef.current = nextMode;
+    if (isScrollMode(nextMode)) {
+      window.requestAnimationFrame(() => {
+        verticalViewportRef.current
+          ?.querySelector<HTMLElement>(`[data-manga-page-index='${indexRef.current}']`)
+          ?.scrollIntoView?.({ block: 'center' });
+      });
+    }
+  }
+
+  function trackVerticalProgress() {
+    if (scrollProgressFrameRef.current !== null) return;
+    scrollProgressFrameRef.current = window.requestAnimationFrame(() => {
+      scrollProgressFrameRef.current = null;
+      const viewport = verticalViewportRef.current;
+      if (!viewport) return;
+      const viewportRect = viewport.getBoundingClientRect();
+      const center = viewportRect.top + viewport.clientHeight / 2;
+      let closestIndex = indexRef.current;
+      let closestDistance = Number.POSITIVE_INFINITY;
+      viewport.querySelectorAll<HTMLElement>('[data-manga-page-index]').forEach((element) => {
+        const rect = element.getBoundingClientRect();
+        const distance = Math.abs(rect.top + rect.height / 2 - center);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = Number(element.dataset.mangaPageIndex);
+        }
+      });
+      if (Number.isFinite(closestIndex)) goTo(closestIndex);
+    });
   }
 
   useEffect(() => {
@@ -208,7 +339,7 @@ export function MangaReader({
   }, [chapterId, endReadingSession, manifest.workId, startReadingSession]);
 
   useEffect(() => {
-    if (mode === 'vertical') return;
+    if (isScrollMode(mode)) return;
     for (const pageIndex of [...visibleIndices, index + 1, index + 2, index + 3]) {
       if (pageIndex >= 0 && pageIndex < manifest.pages.length) void ensurePage(pageIndex);
     }
@@ -221,12 +352,14 @@ export function MangaReader({
       const action = resolveMangaAction({ key: event.key, direction });
       if (action) {
         event.preventDefault();
-        goTo(index + (action === 'next' ? (mode === 'double' ? 2 : 1) : mode === 'double' ? -2 : -1));
+        const next = index + (action === 'next' ? (mode === 'double' ? 2 : 1) : mode === 'double' ? -2 : -1);
+        if (isScrollMode(mode)) scrollToMangaPage(next);
+        else goTo(next);
       }
       if (event.key === 'Escape') setSettingsOpen(false);
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b' && createBookmark) {
         event.preventDefault();
-        saveMangaBookmark();
+        void saveMangaBookmark();
       }
       if (event.key.toLowerCase() === 'f') void toggleFullscreen();
     }
@@ -239,42 +372,61 @@ export function MangaReader({
     else await globalThis.document.documentElement.requestFullscreen();
   }
 
-  function saveMangaBookmark() {
-    ignorePersistenceFailure(createBookmark?.({
-      workId: manifest.workId,
-      chapterId,
-      pageIndex: index,
-      charOffset: null,
-      percent: manifest.pages.length > 0 ? (index + 1) / manifest.pages.length : 0,
-      excerpt: null,
-      note: null,
-    }));
-    setBookmarkNotice(true);
-    window.setTimeout(() => setBookmarkNotice(false), 1800);
+  function showReaderNotice(message: string) {
+    setReaderNotice(message);
+    if (bookmarkTimerRef.current !== null) window.clearTimeout(bookmarkTimerRef.current);
+    bookmarkTimerRef.current = window.setTimeout(() => {
+      setReaderNotice(null);
+      bookmarkTimerRef.current = null;
+    }, 1800);
+  }
+
+  async function saveMangaBookmark() {
+    if (!createBookmark) return;
+    try {
+      await createBookmark({
+        workId: manifest.workId,
+        chapterId,
+        pageIndex: index,
+        charOffset: null,
+        percent: manifest.pages.length > 0 ? (index + 1) / manifest.pages.length : 0,
+        excerpt: null,
+        note: null,
+      });
+      showReaderNotice('Закладка сохранена');
+    } catch {
+      showReaderNotice('Не удалось сохранить закладку');
+    }
   }
 
   return (
-    <div className="manga-reader" data-background={background}>
+    <div className="manga-reader" data-background={background} data-mode={mode}>
       <header className="manga-toolbar">
         <Link aria-label="Закрыть мангу" className="manga-tool" to={backTo}><ArrowLeft aria-hidden="true" /></Link>
         <div className="manga-title"><strong>{manifest.title}</strong><span>{index + 1} из {manifest.pages.length}</span></div>
         <div aria-label="Режим отображения" className="manga-modes" role="group">
-          <button aria-label="Вертикальная лента" aria-pressed={mode === 'vertical'} onClick={() => setMode('vertical')} type="button"><GalleryVerticalEnd aria-hidden="true" /></button>
-          <button aria-label="Одна страница" aria-pressed={mode === 'single'} onClick={() => setMode('single')} type="button"><Square aria-hidden="true" /></button>
-          <button aria-label="Две страницы" aria-pressed={mode === 'double'} onClick={() => setMode('double')} type="button"><Columns2 aria-hidden="true" /></button>
+          <button aria-label="Вертикальная лента" aria-pressed={mode === 'vertical'} onClick={() => changeMode('vertical')} type="button"><Rows3 aria-hidden="true" /></button>
+          <button aria-label="Вебтун" aria-pressed={mode === 'webtoon'} onClick={() => changeMode('webtoon')} type="button"><GalleryVerticalEnd aria-hidden="true" /></button>
+          <button aria-label="Одна страница" aria-pressed={mode === 'single'} onClick={() => changeMode('single')} type="button"><Square aria-hidden="true" /></button>
+          <button aria-label="Две страницы" aria-pressed={mode === 'double'} onClick={() => changeMode('double')} type="button"><Columns2 aria-hidden="true" /></button>
         </div>
         <div className="manga-zoom">
           <button aria-label="Уменьшить" onClick={() => setZoom((value) => Math.max(50, value - 10))} type="button"><Minus aria-hidden="true" /></button>
           <span>{zoom}%</span>
           <button aria-label="Увеличить" onClick={() => setZoom((value) => Math.min(200, value + 10))} type="button"><Plus aria-hidden="true" /></button>
         </div>
-        {createBookmark ? <button aria-label="Добавить закладку" className="manga-tool" onClick={saveMangaBookmark} type="button"><Bookmark aria-hidden="true" /></button> : null}
+        {createBookmark ? <button aria-label="Добавить закладку" className="manga-tool" onClick={() => void saveMangaBookmark()} type="button"><Bookmark aria-hidden="true" /></button> : null}
         <button aria-label="Полный экран" className="manga-tool" onClick={() => void toggleFullscreen()} type="button"><Maximize2 aria-hidden="true" /></button>
         <button aria-label="Настройки манги" className="manga-tool" onClick={() => setSettingsOpen((value) => !value)} type="button"><Settings2 aria-hidden="true" /></button>
       </header>
 
-      {mode === 'vertical' ? (
-        <main className="manga-vertical" style={{ '--manga-page-width': `${zoom * 10}px` } as CSSProperties}>
+      {isScrollMode(mode) ? (
+        <main
+          className={`manga-vertical manga-vertical--${mode}`}
+          onScroll={trackVerticalProgress}
+          ref={verticalViewportRef}
+          style={{ '--manga-page-width': `${zoom * 10}px` } as CSSProperties}
+        >
           {manifest.pages.map((page) => (
             <LazyMangaPage
               dataUrl={pages[page.index]}
@@ -298,7 +450,7 @@ export function MangaReader({
         </main>
       )}
 
-      {mode !== 'vertical' ? (
+      {!isScrollMode(mode) ? (
         <footer className="manga-footer">
           <span>{index + 1}</span>
           <input aria-label="Страница" max={manifest.pages.length} min="1" onChange={(event) => goTo(Number(event.target.value) - 1)} type="range" value={index + 1} />
@@ -314,7 +466,7 @@ export function MangaReader({
         </aside>
       ) : null}
 
-      {bookmarkNotice ? <div aria-live="polite" className="manga-toast"><Bookmark aria-hidden="true" /> Закладка сохранена</div> : null}
+      {readerNotice ? <div aria-live="polite" className="manga-toast"><Bookmark aria-hidden="true" /> {readerNotice}</div> : null}
     </div>
   );
 }
@@ -331,7 +483,7 @@ function MangaPageFrame({
   rootRef?: Ref<HTMLDivElement>;
 }) {
   return (
-    <div className="manga-page" ref={rootRef}>
+    <div className="manga-page" data-manga-page-index={descriptor.index} ref={rootRef}>
       {dataUrl ? <img alt={`Страница ${descriptor.index + 1}`} src={dataUrl} /> : null}
       {!dataUrl && !error ? <span className="manga-page__loading"><i className="spinner" /> {descriptor.label}</span> : null}
       {error ? <span className="manga-page__error">{error}</span> : null}

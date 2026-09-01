@@ -1,4 +1,4 @@
-export type MangaMode = 'vertical' | 'single' | 'double';
+export type MangaMode = 'vertical' | 'webtoon' | 'single' | 'double';
 export type MangaDirection = 'ltr' | 'rtl';
 
 export interface MangaPageDescriptor {

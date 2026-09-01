@@ -14,6 +14,16 @@ const manifest: MangaManifest = {
   ],
 };
 
+const longManifest: MangaManifest = {
+  workId: 'manga-long',
+  title: 'Long Panels',
+  pages: Array.from({ length: 10 }, (_, index) => ({
+    index,
+    label: `${index + 1}.png`,
+    mediaType: 'image/png',
+  })),
+};
+
 describe('manga reader', () => {
   it('loads the current page and exposes real display modes', async () => {
     const loadPage = vi.fn().mockResolvedValue({ index: 0, dataUrl: 'data:image/png;base64,AAAA' });
@@ -25,6 +35,7 @@ describe('manga reader', () => {
 
     expect(screen.getByRole('button', { name: 'Одна страница' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Вертикальная лента' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Вебтун' })).toBeEnabled();
     expect(await screen.findByRole('img', { name: 'Страница 1' })).toHaveAttribute('src', 'data:image/png;base64,AAAA');
   });
 
@@ -67,5 +78,64 @@ describe('manga reader', () => {
     expect(createBookmark).toHaveBeenCalledWith(
       expect.objectContaining({ workId: 'manga-1', pageIndex: 0, note: null }),
     );
+  });
+
+  it('tracks the page at the center of the vertical reading viewport', async () => {
+    const loadPage = vi.fn().mockImplementation(async (index: number) => ({
+      index,
+      dataUrl: `data:image/png;base64,${index}`,
+    }));
+    const saveProgress = vi.fn().mockResolvedValue({});
+    const { container } = render(
+      <MemoryRouter>
+        <MangaReader initialPageIndex={0} loadPage={loadPage} manifest={manifest} saveProgress={saveProgress} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('img', { name: 'Страница 1' });
+    fireEvent.click(screen.getByRole('button', { name: 'Вертикальная лента' }));
+    const viewport = container.querySelector<HTMLElement>('.manga-vertical');
+    const pages = container.querySelectorAll<HTMLElement>('[data-manga-page-index]');
+    expect(viewport).not.toBeNull();
+    expect(pages).toHaveLength(2);
+    Object.defineProperty(viewport, 'clientHeight', { configurable: true, value: 800 });
+    Object.defineProperty(viewport, 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: 0, right: 600, bottom: 800, width: 600, height: 800 }),
+    });
+    Object.defineProperty(pages[0], 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: -780, right: 600, bottom: -20, width: 600, height: 760 }),
+    });
+    Object.defineProperty(pages[1], 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: 40, right: 600, bottom: 800, width: 600, height: 760 }),
+    });
+    fireEvent.scroll(viewport!);
+
+    await waitFor(() => {
+      expect(saveProgress).toHaveBeenCalledWith(
+        expect.objectContaining({
+          locator: { kind: 'manga', chapterId: null, pageIndex: 1 },
+        }),
+      );
+    });
+  });
+
+  it('evicts distant page data instead of growing the cache without limit', async () => {
+    const loadPage = vi.fn().mockImplementation(async (index: number) => ({
+      index,
+      dataUrl: `data:image/png;base64,page-${index}`,
+    }));
+    render(
+      <MemoryRouter>
+        <MangaReader loadPage={loadPage} manifest={longManifest} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('img', { name: 'Страница 1' });
+    fireEvent.change(screen.getByRole('slider', { name: 'Страница' }), { target: { value: '10' } });
+    await screen.findByRole('img', { name: 'Страница 10' });
+    fireEvent.change(screen.getByRole('slider', { name: 'Страница' }), { target: { value: '1' } });
+    await screen.findByRole('img', { name: 'Страница 1' });
+
+    expect(loadPage.mock.calls.filter(([index]) => index === 0)).toHaveLength(2);
   });
 });
