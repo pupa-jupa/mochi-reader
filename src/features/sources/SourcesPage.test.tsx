@@ -76,4 +76,52 @@ describe('sources page', () => {
 
     await waitFor(() => expect(bridge.setSourceEnabled).toHaveBeenCalledWith('source-1', false));
   });
+
+  it('checks an OPDS catalog before connecting it', async () => {
+    const opdsSource = {
+      ...source,
+      id: 'opds-1',
+      name: 'Lunar Library',
+      baseUrl: 'https://books.example/opds',
+      adapterKind: 'opds' as const,
+      capabilities: { search: true, download: true },
+    };
+    const bridge = {
+      listSources: vi.fn().mockResolvedValue([]),
+      previewOpdsCatalog: vi.fn().mockResolvedValue({
+        name: 'Lunar Library',
+        catalogType: 'opds2',
+        itemCount: 12,
+        url: 'https://books.example/opds',
+      }),
+      addOpdsSource: vi.fn().mockResolvedValue(opdsSource),
+      setSourceEnabled: vi.fn(),
+      removeSource: vi.fn(),
+    } as unknown as DesktopBridge;
+    render(<MemoryRouter><SourcesPage bridge={bridge} /></MemoryRouter>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Подключить OPDS' }));
+    fireEvent.change(screen.getByLabelText('Название каталога'), {
+      target: { value: 'Моя библиотека' },
+    });
+    fireEvent.change(screen.getByLabelText('URL каталога'), {
+      target: { value: 'https://books.example/opds' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Проверить каталог' }));
+
+    expect(await screen.findByRole('heading', { name: 'Lunar Library' })).toBeVisible();
+    expect(screen.getByText('OPDS 2.0')).toBeVisible();
+    expect(screen.getByText('12 изданий')).toBeVisible();
+    expect(bridge.previewOpdsCatalog).toHaveBeenCalledWith(
+      'https://books.example/opds',
+      'Моя библиотека',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Подключить каталог' }));
+    expect(await screen.findByText('OPDS-каталог')).toBeVisible();
+    expect(bridge.addOpdsSource).toHaveBeenCalledWith(
+      'https://books.example/opds',
+      'Моя библиотека',
+    );
+  });
 });

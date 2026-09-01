@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, Search, Sparkles } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight, Download, Search, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
@@ -23,6 +23,8 @@ export function SourceCatalogPage({ bridge }: SourceCatalogPageProps) {
   const [loadingSource, setLoadingSource] = useState(shouldLoad);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [importingId, setImportingId] = useState<string | null>(null);
+  const [importedWorkIds, setImportedWorkIds] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!shouldLoad || !sourceId) return;
@@ -63,6 +65,20 @@ export function SourceCatalogPage({ bridge }: SourceCatalogPageProps) {
   function submit(event: FormEvent) {
     event.preventDefault();
     void runSearch(query, 1);
+  }
+
+  async function importBook(item: RemoteMangaSummary) {
+    if (!item.acquisitionUrl || !sourceId) return;
+    setImportingId(item.remoteId);
+    setError(null);
+    try {
+      const workId = await api.importOpdsBook(sourceId, item.acquisitionUrl, item.title);
+      setImportedWorkIds((current) => ({ ...current, [item.remoteId]: workId }));
+    } catch (reason) {
+      setError(sourceError(reason));
+    } finally {
+      setImportingId(null);
+    }
   }
 
   const title = source?.name ?? (loadingSource ? 'Открываем каталог…' : 'Источник не найден');
@@ -131,24 +147,57 @@ export function SourceCatalogPage({ bridge }: SourceCatalogPageProps) {
             <span>Страница {page}</span>
           </div>
           <section aria-label="Результаты поиска" className="source-result-grid">
-            {items.map((item) => (
-              <Link
-                aria-label={`Открыть ${item.title}`}
-                className="source-result-card"
-                key={`${item.remoteId}:${item.url}`}
-                to={mangaDetailsUrl(sourceId, item)}
-              >
-                <div aria-hidden="true" className="source-result-card__cover">
-                  <span>{initials(item.title)}</span>
-                  <Sparkles />
-                </div>
-                <div className="source-result-card__body">
-                  <h3>{item.title}</h3>
-                  <p>{item.summary || 'Описание появится на странице произведения.'}</p>
-                  <span><BookOpen aria-hidden="true" /> Открыть главы</span>
-                </div>
-              </Link>
-            ))}
+            {items.map((item) => {
+              const workId = importedWorkIds[item.remoteId];
+              if (item.contentKind === 'book' || source?.adapterKind === 'opds') {
+                return (
+                  <article className="source-result-card" key={`${item.remoteId}:${item.url}`}>
+                    <div aria-hidden="true" className="source-result-card__cover">
+                      <span>{initials(item.title)}</span>
+                      <Sparkles />
+                    </div>
+                    <div className="source-result-card__body">
+                      <h3>{item.title}</h3>
+                      {item.author ? <strong>{item.author}</strong> : null}
+                      <p>{item.summary || 'Описание в каталоге не указано.'}</p>
+                      {workId ? (
+                        <Link aria-label={`Открыть ${item.title}`} className="button button--secondary" to={`/work/${encodeURIComponent(workId)}`}>
+                          <BookOpen aria-hidden="true" /> Открыть книгу
+                        </Link>
+                      ) : item.acquisitionUrl ? (
+                        <Button
+                          aria-label={`Добавить ${item.title} в библиотеку`}
+                          disabled={importingId === item.remoteId}
+                          onClick={() => void importBook(item)}
+                          variant="secondary"
+                        >
+                          {importingId === item.remoteId ? <span className="spinner" /> : <Download aria-hidden="true" />}
+                          Добавить {item.format?.toUpperCase() || 'книгу'}
+                        </Button>
+                      ) : <span>Нет open-access файла</span>}
+                    </div>
+                  </article>
+                );
+              }
+              return (
+                <Link
+                  aria-label={`Открыть ${item.title}`}
+                  className="source-result-card"
+                  key={`${item.remoteId}:${item.url}`}
+                  to={mangaDetailsUrl(sourceId, item)}
+                >
+                  <div aria-hidden="true" className="source-result-card__cover">
+                    <span>{initials(item.title)}</span>
+                    <Sparkles />
+                  </div>
+                  <div className="source-result-card__body">
+                    <h3>{item.title}</h3>
+                    <p>{item.summary || 'Описание появится на странице произведения.'}</p>
+                    <span><BookOpen aria-hidden="true" /> Открыть главы</span>
+                  </div>
+                </Link>
+              );
+            })}
           </section>
           <nav aria-label="Страницы каталога" className="source-pagination">
             <Button disabled={page <= 1 || searching} onClick={() => void runSearch(submittedQuery, page - 1)} variant="secondary">

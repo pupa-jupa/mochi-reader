@@ -17,6 +17,10 @@ use crate::{
             parse_search as parse_mangadex_search, search_url as mangadex_search_url,
         },
         model::{AdapterKind, RemoteChapter, RemotePage, RemoteSearchPage, ValidatedSource},
+        opds::{
+            catalog_url as opds_catalog_url, filter_page as filter_opds_page,
+            parse_catalog as parse_opds_catalog, search_url as opds_search_url,
+        },
     },
 };
 
@@ -56,6 +60,30 @@ pub async fn search_source(
         ));
     }
     let validated = validate_stored(stored)?;
+    if validated.adapter_kind == AdapterKind::Opds {
+        if page != 1 {
+            return Ok(RemoteSearchPage {
+                items: Vec::new(),
+                has_next_page: false,
+            });
+        }
+        let policy = HttpPolicy::for_source(&validated.base_url)?;
+        let search_url = opds_search_url(&validated, query)?;
+        let request_url = match search_url.as_ref() {
+            Some(url) => url.clone(),
+            None => opds_catalog_url(&validated)?,
+        };
+        let client = SourceHttpClient::new(policy).await?;
+        let (bytes, media_type) = client
+            .get(&request_url, ExpectedContent::Catalog, MAX_CATALOG_BYTES)
+            .await?;
+        let parsed = parse_opds_catalog(utf8(&bytes)?, &media_type, &request_url)?;
+        return Ok(if search_url.is_some() {
+            parsed.page
+        } else {
+            filter_opds_page(parsed.page, query)
+        });
+    }
     if validated.adapter_kind == AdapterKind::Mangadex {
         let policy = HttpPolicy::for_source(&validated.base_url)?;
         let url = mangadex_search_url(&validated, query, page)?;
@@ -76,6 +104,7 @@ pub async fn search_source(
             .get("searchPath")
             .and_then(serde_json::Value::as_str),
         AdapterKind::Mangadex => unreachable!("MangaDex is dispatched before templates"),
+        AdapterKind::Opds => unreachable!("OPDS is dispatched before templates"),
     }
     .ok_or_else(|| validation("В конфигурации источника отсутствует search endpoint."))?;
     let encoded_query = form_urlencoded::byte_serialize(query.as_bytes()).collect::<String>();
@@ -88,6 +117,7 @@ pub async fn search_source(
         AdapterKind::Manifest => ExpectedContent::Json,
         AdapterKind::GenericHtml => ExpectedContent::Html,
         AdapterKind::Mangadex => unreachable!("MangaDex returned before request dispatch"),
+        AdapterKind::Opds => unreachable!("OPDS returned before request dispatch"),
     };
     let (bytes, _) = client.get(&url, expected, MAX_CATALOG_BYTES).await?;
     let text = std::str::from_utf8(&bytes)
@@ -96,6 +126,7 @@ pub async fn search_source(
         AdapterKind::Manifest => parse_manifest_search(&validated, text),
         AdapterKind::GenericHtml => parse_html_search(&validated, text),
         AdapterKind::Mangadex => unreachable!("MangaDex returned before response parsing"),
+        AdapterKind::Opds => unreachable!("OPDS returned before response parsing"),
     }
 }
 
@@ -106,6 +137,9 @@ pub async fn load_chapters(
 ) -> AppResult<Vec<RemoteChapter>> {
     let validated = validate_stored(stored)?;
     validate_remote_argument(remote_id, "Идентификатор произведения")?;
+    if validated.adapter_kind == AdapterKind::Opds {
+        return Err(validation("OPDS-книги не содержат манга-глав."));
+    }
     if validated.adapter_kind == AdapterKind::Mangadex {
         let policy = HttpPolicy::for_source(&validated.base_url)?;
         let client = SourceHttpClient::new(policy).await?;
@@ -147,6 +181,7 @@ pub async fn load_chapters(
             MAX_HTML_BYTES,
         ),
         AdapterKind::Mangadex => unreachable!("MangaDex is dispatched before templates"),
+        AdapterKind::Opds => unreachable!("OPDS is rejected before manga chapters"),
     };
     let client = SourceHttpClient::new(policy).await?;
     let (bytes, _) = client.get(&url, expected, limit).await?;
@@ -155,6 +190,7 @@ pub async fn load_chapters(
         AdapterKind::Manifest => parse_manifest_chapters(&validated, text),
         AdapterKind::GenericHtml => parse_html_chapters(&validated, text),
         AdapterKind::Mangadex => unreachable!("MangaDex returned before response parsing"),
+        AdapterKind::Opds => unreachable!("OPDS is rejected before manga chapters"),
     }
 }
 
@@ -165,6 +201,9 @@ pub async fn load_pages(
 ) -> AppResult<Vec<RemotePage>> {
     let validated = validate_stored(stored)?;
     validate_remote_argument(chapter_id, "Идентификатор главы")?;
+    if validated.adapter_kind == AdapterKind::Opds {
+        return Err(validation("OPDS-книги не содержат манга-страниц."));
+    }
     if validated.adapter_kind == AdapterKind::Mangadex {
         let policy = HttpPolicy::for_source(&validated.base_url)?;
         let url = mangadex_at_home_url(&validated, chapter_id)?;
@@ -187,6 +226,7 @@ pub async fn load_pages(
             MAX_HTML_BYTES,
         ),
         AdapterKind::Mangadex => unreachable!("MangaDex is dispatched before templates"),
+        AdapterKind::Opds => unreachable!("OPDS is rejected before manga pages"),
     };
     let client = SourceHttpClient::new(policy).await?;
     let (bytes, _) = client.get(&url, expected, limit).await?;
@@ -195,6 +235,7 @@ pub async fn load_pages(
         AdapterKind::Manifest => parse_manifest_pages(&validated, text),
         AdapterKind::GenericHtml => parse_html_pages(&validated, text),
         AdapterKind::Mangadex => unreachable!("MangaDex returned before response parsing"),
+        AdapterKind::Opds => unreachable!("OPDS is rejected before manga pages"),
     }
 }
 

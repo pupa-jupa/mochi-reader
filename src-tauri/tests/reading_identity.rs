@@ -128,7 +128,7 @@ fn v6_migration_preserves_legacy_progress_and_history_with_content_identity() {
         })
     );
     assert_eq!(duration_seconds, 600);
-    assert_eq!(version, 8);
+    assert_eq!(version, 9);
 }
 
 #[test]

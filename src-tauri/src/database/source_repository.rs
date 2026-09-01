@@ -158,6 +158,7 @@ fn parse_adapter_kind(value: &str) -> AdapterKind {
     match value {
         "generic_html" => AdapterKind::GenericHtml,
         "mangadex" => AdapterKind::Mangadex,
+        "opds" => AdapterKind::Opds,
         _ => AdapterKind::Manifest,
     }
 }

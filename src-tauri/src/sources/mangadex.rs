@@ -264,6 +264,10 @@ pub fn parse_search(
             cover_url,
             summary: localized(&item.attributes.description)
                 .map(|value| value.chars().take(4_000).collect()),
+            content_kind: Default::default(),
+            author: None,
+            acquisition_url: None,
+            format: None,
         });
     }
     let consumed = response.offset.saturating_add(data_count);

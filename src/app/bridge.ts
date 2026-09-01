@@ -36,6 +36,7 @@ import type {
   RemoteSearchPage,
   RemoteWorkDraft,
   SourceConfig,
+  OpdsCatalogPreview,
 } from '../types/sources';
 
 export type InvokeFunction = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
@@ -89,6 +90,9 @@ export interface DesktopBridge {
   addBuiltInSource(kind: 'mangadex'): Promise<SourceConfig>;
   addSourceFromUrl(url: string): Promise<SourceConfig>;
   importSourceProfile(profileJson: string): Promise<SourceConfig>;
+  previewOpdsCatalog(url: string, name: string): Promise<OpdsCatalogPreview>;
+  addOpdsSource(url: string, name: string): Promise<SourceConfig>;
+  importOpdsBook(sourceId: string, acquisitionUrl: string, title: string): Promise<string>;
   setSourceEnabled(id: string, enabled: boolean): Promise<void>;
   removeSource(id: string): Promise<void>;
   searchSource(sourceId: string, query: string, page: number): Promise<RemoteSearchPage>;
@@ -192,6 +196,12 @@ export function createDesktopBridge(invoke: InvokeFunction): DesktopBridge {
     addSourceFromUrl: (url) => invoke<SourceConfig>('add_source_from_url', { url }),
     importSourceProfile: (profileJson) =>
       invoke<SourceConfig>('import_source_profile', { profileJson }),
+    previewOpdsCatalog: (url, name) =>
+      invoke<OpdsCatalogPreview>('preview_opds_catalog', { url, name }),
+    addOpdsSource: (url, name) =>
+      invoke<SourceConfig>('add_opds_source', { url, name }),
+    importOpdsBook: (sourceId, acquisitionUrl, title) =>
+      invoke<string>('import_opds_book', { sourceId, acquisitionUrl, title }),
     setSourceEnabled: (id, enabled) => invoke<void>('set_source_enabled', { id, enabled }),
     removeSource: (id) => invoke<void>('remove_source', { id }),
     searchSource: (sourceId, query, page) =>

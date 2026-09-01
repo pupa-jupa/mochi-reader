@@ -1,4 +1,11 @@
-export type SourceAdapterKind = 'manifest' | 'generic_html' | 'mangadex';
+export type SourceAdapterKind = 'manifest' | 'generic_html' | 'mangadex' | 'opds';
+
+export interface OpdsCatalogPreview {
+  name: string;
+  catalogType: 'opds1' | 'opds2';
+  itemCount: number | null;
+  url: string;
+}
 
 export interface SourceCapabilities {
   search: boolean;
@@ -22,6 +29,10 @@ export interface RemoteMangaSummary {
   url: string;
   coverUrl: string | null;
   summary: string | null;
+  contentKind?: 'manga' | 'book';
+  author?: string | null;
+  acquisitionUrl?: string | null;
+  format?: string | null;
 }
 
 export interface RemoteWorkDraft {

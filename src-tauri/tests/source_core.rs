@@ -12,7 +12,7 @@ use mochi_reader_lib::{
         service::ensure_download_allowed,
     },
 };
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 use serde_json::json;
 use url::Url;
 
@@ -45,7 +45,7 @@ fn mangadex_source_kind_survives_migration_and_upserts_idempotently() {
     assert_eq!(repository.list().unwrap().len(), 1);
     assert_eq!(stored.source.adapter_kind, AdapterKind::Mangadex);
     assert_eq!(stored.source.adapter_kind.as_str(), "mangadex");
-    assert_eq!(version, 8);
+    assert_eq!(version, 9);
 }
 
 #[test]
@@ -192,7 +192,7 @@ fn declarative_html_profiles_cannot_contain_javascript_and_are_persistent() {
             row.get(0)
         })
         .unwrap();
-    assert_eq!(version, 8);
+    assert_eq!(version, 9);
 }
 
 #[test]
@@ -395,4 +395,85 @@ fn image_cdn_must_be_declared_explicitly() {
         )
         .is_err()
     );
+}
+
+#[test]
+fn opds_migration_preserves_remote_work_foreign_keys() {
+    let connection = Connection::open_in_memory().unwrap();
+    for schema in [
+        include_str!("../migrations/0001_initial.sql"),
+        include_str!("../migrations/0002_persistent_reader_state.sql"),
+        include_str!("../migrations/0003_sources.sql"),
+        include_str!("../migrations/0004_source_cache.sql"),
+        include_str!("../migrations/0005_mangadex_source.sql"),
+        include_str!("../migrations/0006_content_identity.sql"),
+        include_str!("../migrations/0007_remote_library.sql"),
+        include_str!("../migrations/0008_reader_annotations.sql"),
+    ] {
+        connection.execute_batch(schema).unwrap();
+    }
+    connection
+        .execute_batch(
+            "INSERT INTO sources (
+            id, name, base_url, adapter_kind, config_json,
+            supports_search, supports_download, created_at, updated_at
+         ) VALUES (
+            'source-1', 'Legacy', 'https://books.example/catalog', 'manifest', '{}',
+            1, 0, '2026-09-01T00:00:00Z', '2026-09-01T00:00:00Z'
+         );
+         INSERT INTO works (
+            id, title, kind, format, source_path, file_size, fingerprint,
+            chapter_count, status, favorite, missing_file, added_at, updated_at,
+            content_identity, origin_kind, source_id, remote_id, remote_url
+         ) VALUES (
+            'work-1', 'Moon', 'manga', 'remote_manga', '', 0, 'remote-fingerprint',
+            1, 'planned', 0, 0, '2026-09-01T00:00:00Z', '2026-09-01T00:00:00Z',
+            'remote:source-1:moon', 'remote', 'source-1', 'moon', 'https://books.example/moon'
+         );",
+        )
+        .unwrap();
+
+    connection
+        .execute_batch(include_str!("../migrations/0009_opds_source.sql"))
+        .unwrap();
+
+    let source_id: Option<String> = connection
+        .query_row(
+            "SELECT source_id FROM works WHERE id = 'work-1'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(source_id.as_deref(), Some("source-1"));
+    assert_eq!(
+        connection
+            .query_row("PRAGMA foreign_key_check", [], |_row| Ok(1_i64))
+            .optional()
+            .unwrap(),
+        None
+    );
+    connection
+        .execute("DELETE FROM sources WHERE id = 'source-1'", [])
+        .unwrap();
+    let source_id: Option<String> = connection
+        .query_row(
+            "SELECT source_id FROM works WHERE id = 'work-1'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(source_id, None);
+
+    connection
+        .execute(
+            "INSERT INTO sources (
+            id, name, base_url, adapter_kind, config_json,
+            supports_search, supports_download, created_at, updated_at
+         ) VALUES (
+            'opds-1', 'OPDS', 'https://books.example/opds', 'opds', '{}',
+            1, 1, '2026-09-01T00:00:00Z', '2026-09-01T00:00:00Z'
+         )",
+            [],
+        )
+        .unwrap();
 }

@@ -110,6 +110,10 @@ pub fn parse_manifest_search(source: &ValidatedSource, json: &str) -> AppResult<
             url,
             cover_url,
             summary: normalize_optional(item.summary.as_deref(), 4_000),
+            content_kind: Default::default(),
+            author: None,
+            acquisition_url: None,
+            format: None,
         });
     }
     Ok(RemoteSearchPage {
@@ -160,6 +164,10 @@ pub fn parse_html_search(source: &ValidatedSource, html: &str) -> AppResult<Remo
             url,
             cover_url,
             summary,
+            content_kind: Default::default(),
+            author: None,
+            acquisition_url: None,
+            format: None,
         });
     }
     let has_next_page = config

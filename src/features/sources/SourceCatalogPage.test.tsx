@@ -81,4 +81,63 @@ describe('source catalog page', () => {
     );
     expect(bridge.searchSource).toHaveBeenCalledWith('source-1', 'moon', 1);
   });
+
+  it('imports an open-access OPDS book instead of opening the manga flow', async () => {
+    const bridge = {
+      listSources: vi.fn().mockResolvedValue([
+        {
+          id: 'opds-1',
+          name: 'Lunar Library',
+          baseUrl: 'https://books.example/opds',
+          adapterKind: 'opds',
+          enabled: true,
+          capabilities: { search: true, download: true },
+          createdAt: '2026-09-01T00:00:00Z',
+          updatedAt: '2026-09-01T00:00:00Z',
+        },
+      ]),
+      searchSource: vi.fn().mockResolvedValue({
+        items: [
+          {
+            remoteId: 'urn:isbn:moon',
+            title: 'Moon Letters',
+            url: 'https://books.example/books/moon.epub',
+            coverUrl: null,
+            summary: 'Quiet letters.',
+            contentKind: 'book',
+            author: 'Aki Snow',
+            acquisitionUrl: 'https://books.example/books/moon.epub',
+            format: 'epub',
+          },
+        ],
+        hasNextPage: false,
+      }),
+      importOpdsBook: vi.fn().mockResolvedValue('work-1'),
+    } as unknown as DesktopBridge;
+
+    render(
+      <MemoryRouter initialEntries={['/sources/opds-1']}>
+        <Routes>
+          <Route element={<SourceCatalogPage bridge={bridge} />} path="/sources/:sourceId" />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Lunar Library' })).toBeVisible();
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Поиск по каталогу' }), {
+      target: { value: 'moon' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Найти' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Добавить Moon Letters в библиотеку' }));
+
+    expect(bridge.importOpdsBook).toHaveBeenCalledWith(
+      'opds-1',
+      'https://books.example/books/moon.epub',
+      'Moon Letters',
+    );
+    expect(await screen.findByRole('link', { name: 'Открыть Moon Letters' })).toHaveAttribute(
+      'href',
+      '/work/work-1',
+    );
+  });
 });

@@ -18,6 +18,8 @@ pub enum ExpectedContent {
     Json,
     Html,
     Image,
+    Catalog,
+    Book,
 }
 
 pub struct SourceHttpClient {
@@ -80,6 +82,12 @@ impl SourceHttpClient {
             ExpectedContent::Json => "application/json",
             ExpectedContent::Html => "text/html,application/xhtml+xml",
             ExpectedContent::Image => "image/avif,image/webp,image/png,image/jpeg",
+            ExpectedContent::Catalog => {
+                "application/opds+json,application/atom+xml,application/xml,text/xml,application/json"
+            }
+            ExpectedContent::Book => {
+                "application/epub+zip,application/pdf,application/x-fictionbook+xml,application/fb2+xml,text/plain,text/html,text/markdown"
+            }
         };
         let response = self
             .client
@@ -132,6 +140,25 @@ fn validate_media_type(media_type: &str, expected: ExpectedContent) -> AppResult
         ExpectedContent::Json => media_type == "application/json" || media_type.ends_with("+json"),
         ExpectedContent::Html => media_type == "text/html" || media_type == "application/xhtml+xml",
         ExpectedContent::Image => media_type.starts_with("image/"),
+        ExpectedContent::Catalog => {
+            media_type == "application/opds+json"
+                || media_type == "application/atom+xml"
+                || media_type == "application/xml"
+                || media_type == "text/xml"
+                || media_type == "application/json"
+                || media_type.ends_with("+json")
+        }
+        ExpectedContent::Book => matches!(
+            media_type,
+            "application/epub+zip"
+                | "application/pdf"
+                | "application/x-fictionbook+xml"
+                | "application/fb2+xml"
+                | "text/plain"
+                | "text/html"
+                | "application/xhtml+xml"
+                | "text/markdown"
+        ),
     };
     if !valid {
         return Err(validation("Источник вернул неожиданный Content-Type."));

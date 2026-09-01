@@ -1,16 +1,16 @@
-import { Download, ExternalLink, FileJson2, Globe2, Search, ShieldCheck, Trash2, X } from 'lucide-react';
+import { BookOpen, Download, ExternalLink, FileJson2, Globe2, Search, ShieldCheck, Trash2, X } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
 import { desktopBridge, isDesktopRuntime, type DesktopBridge } from '../../app/bridge';
 import { Button } from '../../components/Button';
-import type { SourceAdapterKind, SourceConfig } from '../../types/sources';
+import type { OpdsCatalogPreview, SourceAdapterKind, SourceConfig } from '../../types/sources';
 
 interface SourcesPageProps {
   bridge?: DesktopBridge;
 }
 
-type AddMode = 'url' | 'profile' | null;
+type AddMode = 'url' | 'profile' | 'opds' | null;
 
 export function SourcesPage({ bridge }: SourcesPageProps) {
   const api = bridge ?? desktopBridge;
@@ -20,6 +20,9 @@ export function SourcesPage({ bridge }: SourcesPageProps) {
   const [mode, setMode] = useState<AddMode>(null);
   const [url, setUrl] = useState('');
   const [profileJson, setProfileJson] = useState('');
+  const [opdsName, setOpdsName] = useState('');
+  const [opdsUrl, setOpdsUrl] = useState('');
+  const [opdsPreview, setOpdsPreview] = useState<OpdsCatalogPreview | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
@@ -86,6 +89,41 @@ export function SourcesPage({ bridge }: SourcesPageProps) {
     }
   }
 
+  async function checkOpds(event: FormEvent) {
+    event.preventDefault();
+    const value = opdsUrl.trim();
+    if (!value) return;
+    setBusy(true);
+    setError(null);
+    setOpdsPreview(null);
+    try {
+      setOpdsPreview(await api.previewOpdsCatalog(value, opdsName.trim()));
+    } catch (reason) {
+      setError(sourceError(reason, 'Не удалось проверить OPDS-каталог.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function connectOpds() {
+    const value = opdsUrl.trim();
+    if (!value || !opdsPreview) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const source = await api.addOpdsSource(value, opdsName.trim());
+      setSources((current) => upsertSource(current, source));
+      setOpdsName('');
+      setOpdsUrl('');
+      setOpdsPreview(null);
+      setMode(null);
+    } catch (reason) {
+      setError(sourceError(reason, 'Не удалось подключить OPDS-каталог.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function toggle(source: SourceConfig) {
     const enabled = !source.enabled;
     setSources((current) =>
@@ -141,6 +179,9 @@ export function SourcesPage({ bridge }: SourcesPageProps) {
           <Button aria-label="Добавить по URL" disabled={busy} onClick={() => setMode('url')} variant="secondary">
             <ExternalLink aria-hidden="true" /> Добавить по URL
           </Button>
+          <Button aria-label="Подключить OPDS" disabled={busy} onClick={() => setMode('opds')} variant="secondary">
+            <BookOpen aria-hidden="true" /> Подключить OPDS
+          </Button>
           <Button aria-label="Импорт JSON" disabled={busy} onClick={() => setMode('profile')} variant="secondary">
             <FileJson2 aria-hidden="true" /> Импорт JSON
           </Button>
@@ -161,6 +202,31 @@ export function SourcesPage({ bridge }: SourcesPageProps) {
           <label htmlFor="source-profile-json">JSON-профиль</label>
           <textarea id="source-profile-json" onChange={(event) => setProfileJson(event.target.value)} placeholder={'{\n  "schemaVersion": 1,\n  "name": "…"\n}'} spellCheck="false" value={profileJson} />
           <Button disabled={busy || !profileJson.trim()} type="submit">{busy ? <span className="spinner" /> : <FileJson2 aria-hidden="true" />} Проверить и импортировать</Button>
+        </form>
+      ) : null}
+
+      {mode === 'opds' ? (
+        <form className="source-profile-form" onSubmit={(event) => void checkOpds(event)}>
+          <div className="source-profile-form__heading">
+            <div><strong>Подключить OPDS-каталог</strong><p>Поддерживаются OPDS 1.x (Atom) и OPDS 2.0 (JSON).</p></div>
+            <button aria-label="Закрыть форму OPDS" className="icon-button" onClick={() => { setMode(null); setOpdsPreview(null); }} type="button"><X aria-hidden="true" /></button>
+          </div>
+          <label htmlFor="opds-name">Название каталога</label>
+          <input id="opds-name" maxLength={200} onChange={(event) => { setOpdsName(event.target.value); setOpdsPreview(null); }} placeholder="Необязательно — возьмём из каталога" value={opdsName} />
+          <label htmlFor="opds-url">URL каталога</label>
+          <input autoFocus id="opds-url" onChange={(event) => { setOpdsUrl(event.target.value); setOpdsPreview(null); }} placeholder="https://library.example/opds" type="url" value={opdsUrl} />
+          <Button disabled={busy || !opdsUrl.trim()} type="submit">{busy ? <span className="spinner" /> : <ShieldCheck aria-hidden="true" />} Проверить каталог</Button>
+          {opdsPreview ? (
+            <section aria-label="Предпросмотр OPDS" className="source-safety">
+              <BookOpen aria-hidden="true" />
+              <div>
+                <h2>{opdsPreview.name}</h2>
+                <span>{opdsPreview.catalogType === 'opds2' ? 'OPDS 2.0' : 'OPDS 1.x'}</span>
+                <span>{opdsPreview.itemCount === null ? 'Количество изданий неизвестно' : `${opdsPreview.itemCount} изданий`}</span>
+              </div>
+              <Button disabled={busy} onClick={() => void connectOpds()} type="button">Подключить каталог</Button>
+            </section>
+          ) : null}
         </form>
       ) : null}
 
@@ -200,6 +266,7 @@ function upsertSource(items: SourceConfig[], source: SourceConfig) {
 function adapterLabel(kind: SourceAdapterKind) {
   if (kind === 'mangadex') return 'MangaDex API';
   if (kind === 'manifest') return 'Manifest adapter';
+  if (kind === 'opds') return 'OPDS-каталог';
   return 'HTML profile';
 }
 

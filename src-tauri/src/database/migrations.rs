@@ -11,6 +11,7 @@ const MANGADEX_SOURCE: &str = include_str!("../../migrations/0005_mangadex_sourc
 const CONTENT_IDENTITY: &str = include_str!("../../migrations/0006_content_identity.sql");
 const REMOTE_LIBRARY: &str = include_str!("../../migrations/0007_remote_library.sql");
 const READER_ANNOTATIONS: &str = include_str!("../../migrations/0008_reader_annotations.sql");
+const OPDS_SOURCE: &str = include_str!("../../migrations/0009_opds_source.sql");
 
 pub fn migrate(connection: &Connection) -> AppResult<()> {
     connection.execute_batch("PRAGMA foreign_keys = ON;")?;
@@ -46,6 +47,10 @@ pub fn migrate(connection: &Connection) -> AppResult<()> {
     }
     if version < 8 {
         connection.execute_batch(READER_ANNOTATIONS)?;
+        version = 8;
+    }
+    if version < 9 {
+        connection.execute_batch(OPDS_SOURCE)?;
     }
     connection.execute_batch("PRAGMA foreign_keys = ON;")?;
     Ok(())

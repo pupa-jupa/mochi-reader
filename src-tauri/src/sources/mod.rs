@@ -5,5 +5,6 @@ pub mod http_policy;
 pub mod mangadex;
 pub mod manifest;
 pub mod model;
+pub mod opds;
 pub mod probe;
 pub mod service;

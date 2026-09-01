@@ -203,7 +203,7 @@ fn v8_migration_preserves_legacy_quotes_and_notes() {
             row.get(0)
         })
         .unwrap();
-    assert_eq!(version, 8);
+    assert_eq!(version, 9);
 }
 
 #[test]

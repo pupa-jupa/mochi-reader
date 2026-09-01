@@ -129,6 +129,39 @@ describe('desktop bridge', () => {
     });
   });
 
+  it('previews and connects OPDS catalogs through explicit native commands', async () => {
+    const invoke = vi.fn().mockResolvedValue({ name: 'Lunar Library' });
+    const bridge = createDesktopBridge(invoke);
+
+    await bridge.previewOpdsCatalog('https://books.example/opds', 'My books');
+    await bridge.addOpdsSource('https://books.example/opds', 'My books');
+
+    expect(invoke).toHaveBeenNthCalledWith(1, 'preview_opds_catalog', {
+      url: 'https://books.example/opds',
+      name: 'My books',
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, 'add_opds_source', {
+      url: 'https://books.example/opds',
+      name: 'My books',
+    });
+  });
+
+  it('imports an OPDS acquisition through its source boundary', async () => {
+    const invoke = vi.fn().mockResolvedValue('work-1');
+
+    await createDesktopBridge(invoke).importOpdsBook(
+      'opds-1',
+      'https://books.example/moon.epub',
+      'Moon Letters',
+    );
+
+    expect(invoke).toHaveBeenCalledWith('import_opds_book', {
+      sourceId: 'opds-1',
+      acquisitionUrl: 'https://books.example/moon.epub',
+      title: 'Moon Letters',
+    });
+  });
+
   it('persists and finds a remote work through its source identity', async () => {
     const invoke = vi.fn().mockResolvedValue('remote-work-1');
     const bridge = createDesktopBridge(invoke);

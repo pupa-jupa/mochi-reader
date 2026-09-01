@@ -7,6 +7,7 @@ pub enum AdapterKind {
     Manifest,
     GenericHtml,
     Mangadex,
+    Opds,
 }
 
 impl AdapterKind {
@@ -15,8 +16,17 @@ impl AdapterKind {
             Self::Manifest => "manifest",
             Self::GenericHtml => "generic_html",
             Self::Mangadex => "mangadex",
+            Self::Opds => "opds",
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RemoteContentKind {
+    #[default]
+    Manga,
+    Book,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -56,6 +66,14 @@ pub struct RemoteMangaSummary {
     pub url: String,
     pub cover_url: Option<String>,
     pub summary: Option<String>,
+    #[serde(default)]
+    pub content_kind: RemoteContentKind,
+    #[serde(default)]
+    pub author: Option<String>,
+    #[serde(default)]
+    pub acquisition_url: Option<String>,
+    #[serde(default)]
+    pub format: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

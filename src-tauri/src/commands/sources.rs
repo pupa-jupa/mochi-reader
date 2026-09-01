@@ -1,7 +1,8 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 use tauri::State;
 
 use crate::{
@@ -9,11 +10,15 @@ use crate::{
     cache::{CacheManager, CachedImage},
     database::{settings_repository::SettingsRepository, source_repository::SourceRepository},
     domain::error::{AppError, AppResult},
+    import::job::{ImportOptions, import_paths},
     manga::manifest::MangaPageData,
     sources::{
         html_profile::validate_html_profile,
+        http_client::{ExpectedContent, SourceHttpClient},
+        http_policy::HttpPolicy,
         mangadex::builtin_source_for,
         model::{RemoteChapter, RemotePage, RemoteSearchPage, SourceConfig},
+        opds::{OpdsCatalogPreview, probe_catalog},
         probe::probe_manifest,
         service::{
             ensure_download_allowed, load_chapters, load_page_image, load_pages,
@@ -66,6 +71,94 @@ pub fn import_source_profile(
     let repository = SourceRepository::new(&connection);
     let id = repository.upsert(&source)?;
     repository.get(&id)
+}
+
+#[tauri::command]
+pub async fn preview_opds_catalog(url: String, name: String) -> AppResult<OpdsCatalogPreview> {
+    let (preview, _) = probe_catalog(&url, Some(&name)).await?;
+    Ok(preview)
+}
+
+#[tauri::command]
+pub async fn add_opds_source(
+    state: State<'_, AppState>,
+    url: String,
+    name: String,
+) -> AppResult<SourceConfig> {
+    let database = Arc::clone(&state.database);
+    let (_, source) = probe_catalog(&url, Some(&name)).await?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let connection = database.lock().map_err(|_| unavailable())?;
+        let repository = SourceRepository::new(&connection);
+        let id = repository.upsert(&source)?;
+        repository.get(&id)
+    })
+    .await
+    .map_err(|error| AppError::Validation {
+        message: format!("Не удалось сохранить OPDS-каталог: {error}"),
+    })?
+}
+
+#[tauri::command]
+pub async fn import_opds_book(
+    state: State<'_, AppState>,
+    source_id: String,
+    acquisition_url: String,
+    title: String,
+) -> AppResult<String> {
+    let stored = {
+        let connection = state.database.lock().map_err(|_| unavailable())?;
+        SourceRepository::new(&connection).get_stored(&source_id)?
+    };
+    if !stored.source.enabled
+        || stored.source.adapter_kind != crate::sources::model::AdapterKind::Opds
+    {
+        return Err(AppError::Validation {
+            message: "Книгу можно импортировать только из включённого OPDS-каталога.".to_string(),
+        });
+    }
+    let policy = HttpPolicy::for_source(&stored.source.base_url)?;
+    let url = url::Url::parse(acquisition_url.trim()).map_err(|_| AppError::Validation {
+        message: "OPDS передал некорректную ссылку на книгу.".to_string(),
+    })?;
+    policy.ensure_allowed(&url)?;
+    let client = SourceHttpClient::new(policy).await?;
+    let (bytes, media_type) = client
+        .get(&url, ExpectedContent::Book, 256 * 1024 * 1024)
+        .await?;
+    let extension = book_extension(&media_type).ok_or_else(|| AppError::Validation {
+        message: "Формат OPDS-книги пока не поддерживается.".to_string(),
+    })?;
+    let directory = state
+        .cache_directory
+        .parent()
+        .unwrap_or(&state.cache_directory)
+        .join("source-books")
+        .join(&source_id);
+    tokio::fs::create_dir_all(&directory).await?;
+    let file_path = downloaded_book_path(&directory, &title, url.as_str(), extension);
+    let temporary_path = file_path.with_extension(format!("{extension}.part"));
+    tokio::fs::write(&temporary_path, &bytes).await?;
+    if tokio::fs::try_exists(&file_path).await? {
+        tokio::fs::remove_file(&file_path).await?;
+    }
+    tokio::fs::rename(&temporary_path, &file_path).await?;
+
+    let database = Arc::clone(&state.database);
+    tauri::async_runtime::spawn_blocking(move || {
+        let connection = database.lock().map_err(|_| unavailable())?;
+        let result = import_paths(&connection, &[file_path], &ImportOptions::default());
+        result
+            .items
+            .into_iter()
+            .next()
+            .and_then(|item| item.work_id)
+            .ok_or_else(|| AppError::Validation {
+                message: "Книга скачана, но не прошла проверку формата.".to_string(),
+            })
+    })
+    .await
+    .map_err(join_error)?
 }
 
 #[tauri::command]
@@ -269,4 +362,41 @@ fn join_error(error: impl std::fmt::Display) -> AppError {
     AppError::Validation {
         message: format!("Не удалось сохранить страницу: {error}"),
     }
+}
+
+fn book_extension(media_type: &str) -> Option<&'static str> {
+    match media_type {
+        "application/epub+zip" => Some("epub"),
+        "application/pdf" => Some("pdf"),
+        "application/x-fictionbook+xml" | "application/fb2+xml" => Some("fb2"),
+        "text/plain" => Some("txt"),
+        "text/html" | "application/xhtml+xml" => Some("html"),
+        "text/markdown" => Some("md"),
+        _ => None,
+    }
+}
+
+fn downloaded_book_path(
+    directory: &std::path::Path,
+    title: &str,
+    url: &str,
+    extension: &str,
+) -> PathBuf {
+    let safe_title = title
+        .chars()
+        .filter(|character| character.is_alphanumeric() || matches!(character, ' ' | '-' | '_'))
+        .take(80)
+        .collect::<String>()
+        .trim()
+        .to_string();
+    let safe_title = if safe_title.is_empty() {
+        "book"
+    } else {
+        &safe_title
+    };
+    let digest = Sha256::digest(url.as_bytes())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    directory.join(format!("{safe_title}-{}.{}", &digest[..12], extension))
 }
