@@ -1,6 +1,6 @@
 [package]
 name = "mochi-reader"
-version = "0.1.0"
+version = "2.0.0"
 description = "A cozy local reader for books and manga"
 authors = ["Mochi Reader contributors"]
 edition = "2024"

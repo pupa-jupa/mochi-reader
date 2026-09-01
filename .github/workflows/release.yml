@@ -1,0 +1,90 @@
+name: Release Windows
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-windows:
+    name: Build Windows release draft
+    runs-on: windows-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    env:
+      CARGO_BUILD_JOBS: "2"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Verify application versions
+        shell: pwsh
+        run: ./scripts/verify-version.ps1
+
+      - name: Install pnpm and Node
+        uses: pnpm/setup@c8e77b72cd6022852162c92aa10e7e72b7209c9b # v2
+        with:
+          runtime: node@24
+          cache: true
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+        with:
+          toolchain: stable
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2
+        with:
+          workspaces: "src-tauri -> target"
+
+      - name: Verify tag matches application version
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $expectedTag = "v$version"
+          if ($env:GITHUB_REF_TYPE -eq "tag" -and $env:GITHUB_REF_NAME -ne $expectedTag) {
+            throw "Tag $env:GITHUB_REF_NAME does not match application version $expectedTag."
+          }
+
+      - name: Run release checks
+        run: pnpm test -- --run
+
+      - name: Create draft release and upload NSIS installer
+        id: tauri
+        uses: tauri-apps/tauri-action@944946e3e4cac6603d1fe8f514171e9ecd3c78aa # v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: Mochi Reader v__VERSION__
+          releaseBody: |
+            Windows 10/11 x64 installer for Mochi Reader.
+
+            This draft is unsigned. Verify the SHA-256 checksum before distribution.
+          releaseDraft: true
+          prerelease: false
+          args: --ci --bundles nsis
+
+      - name: Upload SHA-256 checksum
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: v${{ steps.tauri.outputs.appVersion }}
+        run: |
+          $installer = Get-ChildItem "src-tauri/target/release/bundle/nsis/*.exe" | Select-Object -First 1
+          if (-not $installer) {
+            throw "The NSIS installer was not produced."
+          }
+
+          $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash *$($installer.Name)" | Set-Content SHA256SUMS.txt -Encoding ascii
+          gh release upload $env:RELEASE_TAG SHA256SUMS.txt --clobber
