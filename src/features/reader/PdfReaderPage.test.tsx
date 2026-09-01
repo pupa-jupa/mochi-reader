@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 
+import type { ReaderAnnotation, ReaderAnnotationDraft } from '../../types/annotations';
 import { PdfReader, type PdfTextLayerRenderer } from './PdfReaderPage';
 
 function pdfFixture() {
@@ -46,6 +47,37 @@ const renderTextLayer: PdfTextLayerRenderer = async (page, container) => {
   container.replaceChildren(span);
   return () => container.replaceChildren();
 };
+
+function annotationRecord(draft: ReaderAnnotationDraft): ReaderAnnotation {
+  return {
+    ...draft,
+    id: 'pdf-annotation-1',
+    contentIdentity: 'local:pdf-annotation-work',
+    workTitle: 'Quiet PDF',
+    workKind: 'book',
+    coverPath: null,
+    createdAt: '2026-09-01T00:00:00Z',
+    updatedAt: '2026-09-01T00:00:00Z',
+  };
+}
+
+function selectPdfText(element: HTMLElement, start: number, end: number) {
+  const node = element.firstChild;
+  if (!node) throw new Error('PDF text fixture is missing');
+  const range = document.createRange();
+  range.setStart(node, start);
+  range.setEnd(node, end);
+  Object.defineProperty(range, 'getClientRects', {
+    value: () => [{ left: 60, top: 80, right: 360, bottom: 96, width: 300, height: 16 }],
+  });
+  Object.defineProperty(range, 'getBoundingClientRect', {
+    value: () => ({ left: 60, top: 80, right: 360, bottom: 96, width: 300, height: 16 }),
+  });
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  fireEvent.mouseUp(element.closest('.pdf-text-layer') ?? element);
+}
 
 describe('PDF reader', () => {
   it('renders a selectable text layer and persists page navigation', async () => {
@@ -123,5 +155,88 @@ describe('PDF reader', () => {
       excerpt: null,
       note: null,
     });
+  });
+
+  it('creates an anchored highlight from selected PDF text', async () => {
+    const document = pdfFixture();
+    const createAnnotation = vi
+      .fn<(draft: ReaderAnnotationDraft) => Promise<ReaderAnnotation>>()
+      .mockImplementation(async (draft) => annotationRecord(draft));
+    const { container } = render(
+      <MemoryRouter>
+        <PdfReader
+          createAnnotation={createAnnotation}
+          document={document}
+          initialPage={0}
+          listAnnotations={vi.fn().mockResolvedValue([])}
+          renderTextLayer={renderTextLayer}
+          workId="pdf-annotation-work"
+        />
+      </MemoryRouter>,
+    );
+
+    const text = await screen.findByText('A quiet moon above the garden.');
+    const stage = container.querySelector<HTMLElement>('.pdf-page');
+    expect(stage).not.toBeNull();
+    Object.defineProperty(stage, 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: 0, right: 600, bottom: 800, width: 600, height: 800 }),
+    });
+    selectPdfText(text, 2, 12);
+    fireEvent.click(await screen.findByRole('button', { name: 'Подсветить' }));
+
+    await waitFor(() => {
+      expect(createAnnotation).toHaveBeenCalledWith({
+        workId: 'pdf-annotation-work',
+        kind: 'highlight',
+        quote: 'quiet moon',
+        note: null,
+        color: 'sakura',
+        locator: {
+          kind: 'pdf',
+          pageIndex: 0,
+          quote: {
+            exact: 'quiet moon',
+            prefix: 'A ',
+            suffix: ' above the garden.',
+          },
+          rects: [{ x: 0.1, y: 0.1, width: 0.5, height: 0.02 }],
+        },
+      });
+    });
+  });
+
+  it('opens a linked PDF annotation on its exact page and restores its marker', async () => {
+    const document = pdfFixture();
+    const annotation = annotationRecord({
+      workId: 'pdf-annotation-work',
+      kind: 'note',
+      quote: 'moon returned',
+      note: 'Remember the rain.',
+      locator: {
+        kind: 'pdf',
+        pageIndex: 1,
+        quote: { exact: 'moon returned', prefix: 'The ', suffix: ' after rain.' },
+        rects: [{ x: 0.12, y: 0.18, width: 0.35, height: 0.025 }],
+      },
+      color: 'lavender',
+    });
+    const { container } = render(
+      <MemoryRouter>
+        <PdfReader
+          document={document}
+          focusAnnotationId="pdf-annotation-1"
+          initialPage={0}
+          listAnnotations={vi.fn().mockResolvedValue([annotation])}
+          renderTextLayer={renderTextLayer}
+          workId="pdf-annotation-work"
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Текущая страница PDF')).toHaveValue(2);
+    });
+    expect(screen.getByRole('complementary', { name: 'Заметки к PDF' })).toBeVisible();
+    expect(container.querySelector('[data-reader-annotation="pdf-annotation-1"]')).toBeVisible();
   });
 });

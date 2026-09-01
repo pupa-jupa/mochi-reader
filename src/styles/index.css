@@ -1170,6 +1170,12 @@ input[type='range'] { accent-color: var(--accent); }
   color: #eee8ea;
   background: #242225;
   grid-template-rows: 58px minmax(0, 1fr);
+  --reader-text-local: #f3ecef;
+  --reader-muted-local: #b8adb2;
+  --reader-surface-local: #2f2b2f;
+  --reader-border-local: #4d464c;
+  --accent: #e5859c;
+  --danger: #ef7891;
 }
 .pdf-toolbar {
   z-index: 10;
@@ -1249,6 +1255,31 @@ input[type='range'] { accent-color: var(--accent); }
   cursor: default;
   user-select: none;
 }
+.pdf-annotation-layer { position: absolute; z-index: 2; inset: 0; overflow: hidden; pointer-events: none; }
+.pdf-annotation-marker {
+  position: absolute;
+  min-width: 2px;
+  min-height: 2px;
+  padding: 0;
+  background: color-mix(in srgb, var(--pdf-annotation-color, #e991a8) 42%, transparent);
+  border: 0;
+  border-radius: 2px;
+  cursor: pointer;
+  opacity: 0.82;
+  pointer-events: auto;
+  transition: opacity 140ms ease, box-shadow 140ms ease;
+}
+.pdf-annotation-marker:hover,
+.pdf-annotation-marker:focus-visible { box-shadow: 0 0 0 2px rgb(255 255 255 / 72%); opacity: 1; outline: 0; }
+.pdf-annotation-marker[data-annotation-color='peach'] { --pdf-annotation-color: #f3aa7f; }
+.pdf-annotation-marker[data-annotation-color='lavender'] { --pdf-annotation-color: #bba5e8; }
+.pdf-annotation-marker[data-annotation-color='butter'] { --pdf-annotation-color: #edcc68; }
+.pdf-annotation-marker[data-annotation-color='mint'] { --pdf-annotation-color: #83c9ae; }
+.pdf-annotation-marker[data-annotation-color='none'] { --pdf-annotation-color: #9e93a4; }
+.pdf-annotation-marker[data-annotation-kind='note'] { border-bottom: 2px dotted color-mix(in srgb, var(--pdf-annotation-color) 88%, #30242a); }
+.pdf-annotation-marker[data-annotation-kind='quote'] { background: transparent; border-bottom: 2px solid color-mix(in srgb, var(--pdf-annotation-color) 76%, #30242a); border-radius: 0; }
+.pdf-reader .reader-annotations { top: 58px; }
+.pdf-reader .reader-selection-note { color: var(--reader-muted-local); background: var(--reader-surface-local); border-color: var(--reader-border-local); }
 .pdf-thumbnails,
 .pdf-search-panel {
   position: absolute;

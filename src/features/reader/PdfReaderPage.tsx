@@ -10,10 +10,11 @@ import {
   Plus,
   Rows3,
   Search,
+  StickyNote,
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type {
   PDFDocumentLoadingTask,
   PDFDocumentProxy,
@@ -24,11 +25,22 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 import { desktopBridge } from '../../app/bridge';
 import type {
+  AnnotationKind,
+  AnnotationQuery,
+  HighlightColor,
+  ReaderAnnotation,
+  ReaderAnnotationDraft,
+} from '../../types/annotations';
+import type {
   BookmarkDraft,
   ProgressUpdate,
   ReaderLocator,
   ReadingProgress,
 } from '../../types/persistence';
+import {
+  createPdfAnnotationLocator,
+  type PdfAnnotationLocator,
+} from '../../utils/pdfAnnotationLocator';
 
 function savedPage(workId: string) {
   const value = Number(localStorage.getItem(`mochi-reader:pdf-position:${workId}`) ?? 1);
@@ -48,6 +60,26 @@ interface PdfSearchResult {
   pageNumber: number;
   count: number;
   excerpt: string;
+}
+
+interface PdfSelectionSnapshot {
+  locator: PdfAnnotationLocator;
+  quote: string;
+  left: number;
+  top: number;
+}
+
+function annotationKindLabel(kind: AnnotationKind) {
+  if (kind === 'highlight') return 'Подсветка';
+  if (kind === 'note') return 'Заметка';
+  return 'Цитата';
+}
+
+function annotationDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ''
+    : new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(date);
 }
 
 export type PdfTextLayerRenderer = (
@@ -72,6 +104,7 @@ const defaultTextLayerRenderer: PdfTextLayerRenderer = async (page, container, v
 
 export function PdfReaderPage() {
   const { id = '' } = useParams();
+  const [searchParams] = useSearchParams();
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState('Читаем структуру PDF…');
@@ -123,9 +156,14 @@ export function PdfReaderPage() {
   return (
     <PdfReader
       document={pdf}
+      copyText={desktopBridge.copyText}
+      createAnnotation={desktopBridge.createAnnotation}
       createBookmark={desktopBridge.createBookmark}
+      deleteAnnotation={desktopBridge.deleteAnnotation}
       endReadingSession={desktopBridge.endReadingSession}
+      focusAnnotationId={searchParams.get('annotation')}
       initialPage={initialPage}
+      listAnnotations={desktopBridge.listAnnotations}
       saveProgress={desktopBridge.saveProgress}
       startReadingSession={desktopBridge.startReadingSession}
       workId={id}
@@ -139,6 +177,11 @@ interface PdfReaderProps {
   initialPage?: number | null;
   saveProgress?(update: ProgressUpdate): Promise<ReadingProgress>;
   createBookmark?(draft: BookmarkDraft): Promise<string>;
+  listAnnotations?(query?: AnnotationQuery): Promise<ReaderAnnotation[]>;
+  createAnnotation?(draft: ReaderAnnotationDraft): Promise<ReaderAnnotation>;
+  deleteAnnotation?(id: string): Promise<void>;
+  copyText?(text: string): Promise<void>;
+  focusAnnotationId?: string | null;
   renderTextLayer?: PdfTextLayerRenderer;
   startReadingSession?(workId: string, locator: ReaderLocator): Promise<string>;
   endReadingSession?(id: string, locator: ReaderLocator): Promise<void>;
@@ -150,6 +193,11 @@ export function PdfReader({
   initialPage = null,
   saveProgress,
   createBookmark,
+  listAnnotations,
+  createAnnotation,
+  deleteAnnotation,
+  copyText,
+  focusAnnotationId = null,
   renderTextLayer = defaultTextLayerRenderer,
   startReadingSession,
   endReadingSession,
@@ -167,6 +215,13 @@ export function PdfReader({
   const [searching, setSearching] = useState(false);
   const [searchComplete, setSearchComplete] = useState(false);
   const [bookmarkNotice, setBookmarkNotice] = useState(false);
+  const [annotationsOpen, setAnnotationsOpen] = useState(false);
+  const [annotations, setAnnotations] = useState<ReaderAnnotation[]>([]);
+  const [selectionSnapshot, setSelectionSnapshot] = useState<PdfSelectionSnapshot | null>(null);
+  const [selectionNoteOpen, setSelectionNoteOpen] = useState(false);
+  const [selectionNoteDraft, setSelectionNoteDraft] = useState('');
+  const [annotationBusy, setAnnotationBusy] = useState(false);
+  const [annotationNotice, setAnnotationNotice] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pageStageRef = useRef<HTMLDivElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
@@ -174,8 +229,17 @@ export function PdfReader({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const renderTask = useRef<RenderTask | null>(null);
   const searchRequestRef = useRef(0);
+  const annotationNoticeTimerRef = useRef<number | null>(null);
+  const focusedAnnotationRef = useRef<string | null>(null);
   const pageRef = useRef(pageNumber);
   pageRef.current = pageNumber;
+  const pdfAnnotations = annotations.filter(
+    (annotation) => annotation.locator.kind === 'pdf',
+  );
+  const currentPageAnnotations = pdfAnnotations.filter(
+    (annotation) => annotation.locator.kind === 'pdf'
+      && annotation.locator.pageIndex === pageNumber - 1,
+  );
 
   useEffect(() => {
     let active = true;
@@ -194,6 +258,27 @@ export function PdfReader({
       setPage(null);
     };
   }, [document, pageNumber, saveProgress, workId]);
+
+  useEffect(() => {
+    if (!listAnnotations) return;
+    let active = true;
+    void listAnnotations({ workId })
+      .then((records) => {
+        if (active) setAnnotations(records);
+      })
+      .catch(() => {
+        if (active) setAnnotationNotice('Не удалось загрузить заметки');
+      });
+    return () => {
+      active = false;
+    };
+  }, [listAnnotations, workId]);
+
+  useEffect(() => () => {
+    if (annotationNoticeTimerRef.current !== null) {
+      window.clearTimeout(annotationNoticeTimerRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (!startReadingSession) return;
@@ -263,10 +348,27 @@ export function PdfReader({
   const goTo = useCallback(
     (value: number) => {
       setRenderError(null);
+      setSelectionSnapshot(null);
+      setSelectionNoteOpen(false);
       setPageNumber(Math.min(document.numPages, Math.max(1, Math.round(value))));
     },
     [document.numPages],
   );
+
+  useEffect(() => {
+    if (!focusAnnotationId || focusedAnnotationRef.current === focusAnnotationId) return;
+    const annotation = annotations.find((record) => record.id === focusAnnotationId);
+    if (!annotation || annotation.locator.kind !== 'pdf') return;
+    const locator = annotation.locator;
+    const frame = window.requestAnimationFrame(() => {
+      focusedAnnotationRef.current = focusAnnotationId;
+      setAnnotationsOpen(true);
+      setSearchOpen(false);
+      setThumbnailsOpen(false);
+      goTo(locator.pageIndex + 1);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [annotations, focusAnnotationId, goTo]);
 
   useEffect(() => {
     function handleKeydown(event: KeyboardEvent) {
@@ -281,6 +383,9 @@ export function PdfReader({
       if (event.key === 'Escape') {
         setSearchOpen(false);
         setThumbnailsOpen(false);
+        setAnnotationsOpen(false);
+        setSelectionSnapshot(null);
+        setSelectionNoteOpen(false);
       }
       if (target?.matches('input, textarea')) return;
       if (event.key === 'ArrowRight' || event.key === 'PageDown') goTo(pageNumber + 1);
@@ -340,6 +445,116 @@ export function PdfReader({
     }
   }
 
+  function showAnnotationNotice(message: string) {
+    setAnnotationNotice(message);
+    if (annotationNoticeTimerRef.current !== null) {
+      window.clearTimeout(annotationNoticeTimerRef.current);
+    }
+    annotationNoticeTimerRef.current = window.setTimeout(() => {
+      setAnnotationNotice(null);
+      annotationNoticeTimerRef.current = null;
+    }, 1800);
+  }
+
+  function capturePdfSelection() {
+    const selection = globalThis.getSelection?.();
+    const textLayer = textLayerRef.current;
+    const stage = pageStageRef.current;
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed || !textLayer || !stage) {
+      if (!selectionNoteOpen) setSelectionSnapshot(null);
+      return;
+    }
+    const range = selection.getRangeAt(0);
+    try {
+      const locator = createPdfAnnotationLocator(textLayer, stage, range, pageNumber - 1);
+      const rect = typeof range.getBoundingClientRect === 'function'
+        ? range.getBoundingClientRect()
+        : stage.getBoundingClientRect();
+      const horizontalInset = Math.min(210, globalThis.innerWidth / 2);
+      const center = rect.width > 0 ? rect.left + rect.width / 2 : globalThis.innerWidth / 2;
+      setSelectionSnapshot({
+        locator,
+        quote: locator.quote?.exact ?? range.toString(),
+        left: Math.max(horizontalInset, Math.min(globalThis.innerWidth - horizontalInset, center)),
+        top: rect.height > 0 ? Math.max(76, rect.top - 10) : 132,
+      });
+      setSelectionNoteOpen(false);
+      setSelectionNoteDraft('');
+    } catch {
+      setSelectionSnapshot(null);
+    }
+  }
+
+  function dismissPdfSelection() {
+    setSelectionSnapshot(null);
+    setSelectionNoteOpen(false);
+    setSelectionNoteDraft('');
+    globalThis.getSelection?.()?.removeAllRanges();
+  }
+
+  async function saveSelectionAnnotation(
+    kind: AnnotationKind,
+    note: string | null,
+    color: HighlightColor | null,
+  ) {
+    if (!selectionSnapshot || !createAnnotation || annotationBusy) return;
+    setAnnotationBusy(true);
+    try {
+      const annotation = await createAnnotation({
+        workId,
+        kind,
+        quote: selectionSnapshot.quote,
+        note,
+        locator: selectionSnapshot.locator,
+        color,
+      });
+      setAnnotations((current) => [annotation, ...current.filter((item) => item.id !== annotation.id)]);
+      dismissPdfSelection();
+      showAnnotationNotice(
+        kind === 'highlight' ? 'Подсветка сохранена' : kind === 'note' ? 'Заметка сохранена' : 'Цитата сохранена',
+      );
+    } catch {
+      showAnnotationNotice('Не удалось сохранить фрагмент');
+    } finally {
+      setAnnotationBusy(false);
+    }
+  }
+
+  async function copySelection() {
+    if (!selectionSnapshot) return;
+    try {
+      if (copyText) await copyText(selectionSnapshot.quote);
+      else if (globalThis.navigator.clipboard) {
+        await globalThis.navigator.clipboard.writeText(selectionSnapshot.quote);
+      } else {
+        throw new Error('Clipboard is unavailable.');
+      }
+      dismissPdfSelection();
+      showAnnotationNotice('Фрагмент скопирован');
+    } catch {
+      showAnnotationNotice('Не удалось скопировать фрагмент');
+    }
+  }
+
+  function jumpToAnnotation(annotation: ReaderAnnotation) {
+    if (annotation.locator.kind !== 'pdf') return;
+    setAnnotationsOpen(true);
+    setSearchOpen(false);
+    setThumbnailsOpen(false);
+    goTo(annotation.locator.pageIndex + 1);
+  }
+
+  async function removeAnnotation(id: string) {
+    if (!deleteAnnotation) return;
+    try {
+      await deleteAnnotation(id);
+      setAnnotations((current) => current.filter((annotation) => annotation.id !== id));
+      showAnnotationNotice('Заметка удалена');
+    } catch {
+      showAnnotationNotice('Не удалось удалить заметку');
+    }
+  }
+
   function savePdfBookmark() {
     ignorePersistenceFailure(createBookmark?.({
       workId,
@@ -377,7 +592,7 @@ export function PdfReader({
     <div className="pdf-reader">
       <header className="pdf-toolbar">
         <Link aria-label="Закрыть PDF" className="pdf-tool" to={`/work/${workId}`}><ArrowLeft aria-hidden="true" /></Link>
-        <button aria-label="Миниатюры страниц" aria-pressed={thumbnailsOpen} className="pdf-tool" onClick={() => { setThumbnailsOpen((value) => !value); setSearchOpen(false); }} type="button"><PanelLeft aria-hidden="true" /></button>
+        <button aria-label="Миниатюры страниц" aria-pressed={thumbnailsOpen} className="pdf-tool" onClick={() => { setThumbnailsOpen((value) => !value); setSearchOpen(false); setAnnotationsOpen(false); }} type="button"><PanelLeft aria-hidden="true" /></button>
         <div className="pdf-pagination">
           <button aria-label="Предыдущая страница" disabled={pageNumber === 1} onClick={() => goTo(pageNumber - 1)} type="button"><ChevronLeft aria-hidden="true" /></button>
           <input aria-label="Текущая страница PDF" max={document.numPages} min="1" onChange={(event) => goTo(Number(event.target.value))} type="number" value={pageNumber} />
@@ -385,8 +600,9 @@ export function PdfReader({
           <button aria-label="Следующая страница" disabled={pageNumber === document.numPages} onClick={() => goTo(pageNumber + 1)} type="button"><ChevronRight aria-hidden="true" /></button>
         </div>
         <div className="pdf-toolbar__spacer" />
-        <button aria-label="Поиск в PDF" aria-pressed={searchOpen} className="pdf-tool" onClick={() => { setSearchOpen((value) => !value); setThumbnailsOpen(false); window.setTimeout(() => searchInputRef.current?.focus(), 0); }} type="button"><Search aria-hidden="true" /></button>
+        <button aria-label="Поиск в PDF" aria-pressed={searchOpen} className="pdf-tool" onClick={() => { setSearchOpen((value) => !value); setThumbnailsOpen(false); setAnnotationsOpen(false); window.setTimeout(() => searchInputRef.current?.focus(), 0); }} type="button"><Search aria-hidden="true" /></button>
         {createBookmark ? <button aria-label="Добавить закладку PDF" className="pdf-tool" onClick={savePdfBookmark} type="button"><Bookmark aria-hidden="true" /></button> : null}
+        {listAnnotations || createAnnotation ? <button aria-label="Заметки PDF" aria-pressed={annotationsOpen} className="pdf-tool" onClick={() => { setAnnotationsOpen((value) => !value); setSearchOpen(false); setThumbnailsOpen(false); }} type="button"><StickyNote aria-hidden="true" /></button> : null}
         <div className="pdf-zoom">
           <button aria-label="Уменьшить PDF" onClick={() => setScale((value) => Math.max(0.25, value - 0.1))} type="button"><Minus aria-hidden="true" /></button>
           <span>{Math.round(scale * 100)}%</span>
@@ -396,6 +612,54 @@ export function PdfReader({
         <button aria-label="Вписать страницу" className="pdf-tool" onClick={fitPage} type="button"><Expand aria-hidden="true" /></button>
         <button aria-label="Полный экран" className="pdf-tool" onClick={() => void toggleFullscreen()} type="button"><Maximize2 aria-hidden="true" /></button>
       </header>
+
+      {selectionSnapshot && !selectionNoteOpen ? (
+        <div
+          aria-label="Действия с выделением PDF"
+          className="reader-selection-toolbar"
+          onMouseDown={(event) => event.preventDefault()}
+          role="toolbar"
+          style={{ left: selectionSnapshot.left, top: selectionSnapshot.top }}
+        >
+          <button disabled={annotationBusy || !createAnnotation} onClick={() => void saveSelectionAnnotation('highlight', null, 'sakura')} type="button">Подсветить</button>
+          <button disabled={annotationBusy || !createAnnotation} onClick={() => setSelectionNoteOpen(true)} type="button">Заметка к выделению</button>
+          <button disabled={annotationBusy || !createAnnotation} onClick={() => void saveSelectionAnnotation('quote', null, null)} type="button">Сохранить цитату</button>
+          <button disabled={annotationBusy} onClick={() => void copySelection()} type="button">Копировать выделение</button>
+        </div>
+      ) : null}
+
+      {selectionSnapshot && selectionNoteOpen ? (
+        <form
+          className="reader-selection-note"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const note = selectionNoteDraft.trim();
+            if (note) void saveSelectionAnnotation('note', note, 'lavender');
+          }}
+          style={{
+            left: selectionSnapshot.left,
+            top: Math.max(76, Math.min(globalThis.innerHeight - 250, selectionSnapshot.top + 22)),
+          }}
+        >
+          <blockquote>{selectionSnapshot.quote}</blockquote>
+          <label>
+            <span>Комментарий к выделению</span>
+            <textarea
+              autoFocus
+              maxLength={2000}
+              onChange={(event) => setSelectionNoteDraft(event.target.value)}
+              placeholder="Что хочется запомнить?"
+              rows={3}
+              value={selectionNoteDraft}
+            />
+          </label>
+          <div>
+            <span>{selectionNoteDraft.length} / 2000</span>
+            <button onClick={dismissPdfSelection} type="button">Отмена</button>
+            <button disabled={!selectionNoteDraft.trim() || annotationBusy} type="submit">Сохранить заметку к выделению</button>
+          </div>
+        </form>
+      ) : null}
 
       {thumbnailsOpen ? (
         <aside aria-label="Миниатюры PDF" className="pdf-thumbnails">
@@ -430,14 +694,74 @@ export function PdfReader({
         </aside>
       ) : null}
 
-      <main className="pdf-viewport" ref={viewportRef}>
+      {annotationsOpen ? (
+        <aside aria-label="Заметки к PDF" className="reader-annotations pdf-annotations">
+          <div className="reader-annotations__heading">
+            <div><strong>Заметки</strong><span>{pdfAnnotations.length}</span></div>
+            <button aria-label="Закрыть заметки PDF" onClick={() => setAnnotationsOpen(false)} type="button"><X aria-hidden="true" /></button>
+          </div>
+          {pdfAnnotations.length > 0 ? (
+            <div className="reader-annotations__list">
+              {pdfAnnotations.map((annotation) => {
+                const locator = annotation.locator;
+                if (locator.kind !== 'pdf') return null;
+                return (
+                  <article key={annotation.id}>
+                    <button aria-label={`Открыть заметку на странице ${locator.pageIndex + 1}`} className="reader-annotation__jump" onClick={() => jumpToAnnotation(annotation)} type="button">
+                      <span className="reader-annotation__meta">
+                        <span>{annotationKindLabel(annotation.kind)}</span>
+                        <span>Страница {locator.pageIndex + 1} · {annotationDate(annotation.createdAt)}</span>
+                      </span>
+                      <blockquote>{annotation.quote || 'Фрагмент страницы'}</blockquote>
+                      {annotation.note ? <p>{annotation.note}</p> : null}
+                    </button>
+                    {deleteAnnotation ? (
+                      <button aria-label={`Удалить: ${annotation.quote.slice(0, 60)}`} className="reader-annotation__delete" onClick={() => void removeAnnotation(annotation.id)} type="button"><X aria-hidden="true" /></button>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="reader-annotations__empty"><StickyNote aria-hidden="true" /><p>Выдели текст PDF, чтобы сохранить первую мысль.</p></div>
+          )}
+        </aside>
+      ) : null}
+
+      <main className="pdf-viewport" onScroll={() => { if (selectionSnapshot && !selectionNoteOpen) dismissPdfSelection(); }} ref={viewportRef}>
         {renderError ? <div className="pdf-render-error">{renderError}</div> : null}
         <div className="pdf-page" ref={pageStageRef}>
           <canvas aria-label={`Страница PDF ${pageNumber}`} ref={canvasRef} role="img" />
-          <div aria-label={`Текстовый слой страницы ${pageNumber}`} className="pdf-text-layer textLayer" ref={textLayerRef} />
+          <div aria-label={`Текстовый слой страницы ${pageNumber}`} className="pdf-text-layer textLayer" onMouseUp={capturePdfSelection} ref={textLayerRef} />
+          <div aria-label={`Аннотации страницы ${pageNumber}`} className="pdf-annotation-layer">
+            {currentPageAnnotations.flatMap((annotation) => {
+              const locator = annotation.locator;
+              if (locator.kind !== 'pdf') return [];
+              return locator.rects.map((rect, rectIndex) => (
+                <button
+                  aria-label={rectIndex === 0 ? `Открыть ${annotationKindLabel(annotation.kind).toLocaleLowerCase()}: ${annotation.quote}` : undefined}
+                  className="pdf-annotation-marker"
+                  data-annotation-color={annotation.color ?? 'none'}
+                  data-annotation-kind={annotation.kind}
+                  data-reader-annotation={annotation.id}
+                  key={`${annotation.id}:${rectIndex}`}
+                  onClick={() => setAnnotationsOpen(true)}
+                  style={{
+                    left: `${rect.x * 100}%`,
+                    top: `${rect.y * 100}%`,
+                    width: `${rect.width * 100}%`,
+                    height: `${rect.height * 100}%`,
+                  }}
+                  tabIndex={rectIndex === 0 ? 0 : -1}
+                  type="button"
+                />
+              ));
+            })}
+          </div>
         </div>
       </main>
       {bookmarkNotice ? <div aria-live="polite" className="pdf-toast"><Bookmark aria-hidden="true" /> Закладка сохранена</div> : null}
+      {annotationNotice ? <div aria-live="polite" className="pdf-toast"><StickyNote aria-hidden="true" /> {annotationNotice}</div> : null}
     </div>
   );
 }
