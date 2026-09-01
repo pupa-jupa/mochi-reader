@@ -17,6 +17,7 @@ use crate::{
         http_client::{ExpectedContent, SourceHttpClient},
         http_policy::HttpPolicy,
         mangadex::builtin_source_for,
+        manifest::validate_manifest_document,
         model::{RemoteChapter, RemotePage, RemoteSearchPage, SourceConfig},
         opds::{OpdsCatalogPreview, probe_catalog},
         probe::probe_manifest,
@@ -66,7 +67,14 @@ pub fn import_source_profile(
     state: State<'_, AppState>,
     profile_json: String,
 ) -> AppResult<SourceConfig> {
-    let source = validate_html_profile(&profile_json)?;
+    let is_source_manifest = serde_json::from_str::<serde_json::Value>(&profile_json)
+        .ok()
+        .is_some_and(|value| value.get("mappings").is_some() || value.get("kind").is_some());
+    let source = if is_source_manifest {
+        validate_manifest_document(&profile_json)?
+    } else {
+        validate_html_profile(&profile_json)?
+    };
     let connection = state.database.lock().map_err(|_| unavailable())?;
     let repository = SourceRepository::new(&connection);
     let id = repository.upsert(&source)?;

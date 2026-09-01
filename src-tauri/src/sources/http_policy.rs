@@ -45,7 +45,8 @@ pub fn resolve_image_url(source: &ValidatedSource, value: &str) -> AppResult<Url
     }
     let allowed = source
         .config
-        .get("imageOrigins")
+        .get("allowedDomains")
+        .or_else(|| source.config.get("imageOrigins"))
         .and_then(serde_json::Value::as_array)
         .into_iter()
         .flatten()

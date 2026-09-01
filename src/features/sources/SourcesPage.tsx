@@ -198,9 +198,9 @@ export function SourcesPage({ bridge }: SourcesPageProps) {
 
       {mode === 'profile' ? (
         <form className="source-profile-form" onSubmit={(event) => void submitProfile(event)}>
-          <div className="source-profile-form__heading"><div><strong>Декларативный HTML-профиль</strong><p>Только URL-шаблоны и CSS selectors — JavaScript запрещён.</p></div><button aria-label="Закрыть импорт JSON" className="icon-button" onClick={() => setMode(null)} type="button"><X aria-hidden="true" /></button></div>
+          <div className="source-profile-form__heading"><div><strong>Декларативный JSON-источник</strong><p>Mochi Source Manifest v1 или legacy HTML-профиль. JavaScript запрещён.</p></div><button aria-label="Закрыть импорт JSON" className="icon-button" onClick={() => setMode(null)} type="button"><X aria-hidden="true" /></button></div>
           <label htmlFor="source-profile-json">JSON-профиль</label>
-          <textarea id="source-profile-json" onChange={(event) => setProfileJson(event.target.value)} placeholder={'{\n  "schemaVersion": 1,\n  "name": "…"\n}'} spellCheck="false" value={profileJson} />
+          <textarea id="source-profile-json" onChange={(event) => setProfileJson(event.target.value)} placeholder={'{\n  "schemaVersion": 1,\n  "id": "example.source",\n  "kind": "manga",\n  "name": "…"\n}'} spellCheck="false" value={profileJson} />
           <Button disabled={busy || !profileJson.trim()} type="submit">{busy ? <span className="spinner" /> : <FileJson2 aria-hidden="true" />} Проверить и импортировать</Button>
         </form>
       ) : null}

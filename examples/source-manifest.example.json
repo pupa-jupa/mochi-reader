@@ -1,0 +1,50 @@
+{
+  "$schema": "../schemas/mochi-source-manifest-v1.schema.json",
+  "schemaVersion": 1,
+  "id": "example.moon-manga",
+  "name": "Moon Manga API",
+  "kind": "manga",
+  "allowedDomains": [
+    "https://cdn.manga.example"
+  ],
+  "baseUrl": "https://manga.example",
+  "endpoints": {
+    "search": "/v1/search?q={query}&page={page}",
+    "details": "/v1/manga/{id}",
+    "chapters": "/v1/manga/{id}/chapters",
+    "pages": "/v1/chapter/{id}/pages"
+  },
+  "pagination": {
+    "kind": "page",
+    "start": 1
+  },
+  "mappings": {
+    "search": {
+      "items": "$.payload.results",
+      "id": "$.slug",
+      "title": "$.name",
+      "url": "$.links.details",
+      "coverUrl": "$.art.cover",
+      "summary": "$.synopsis",
+      "hasNextPage": "$.payload.hasMore"
+    },
+    "chapters": {
+      "items": "$.data.chapters",
+      "id": "$.slug",
+      "title": "$.label",
+      "url": "$.href"
+    },
+    "pages": {
+      "items": "$.data.images",
+      "url": "$.src",
+      "label": "$.caption"
+    }
+  },
+  "formats": [
+    "remote_manga"
+  ],
+  "capabilities": {
+    "search": true,
+    "download": false
+  }
+}

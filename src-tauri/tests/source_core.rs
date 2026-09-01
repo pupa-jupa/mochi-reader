@@ -7,7 +7,7 @@ use mochi_reader_lib::{
         },
         html_profile::validate_html_profile,
         http_policy::HttpPolicy,
-        manifest::validate_manifest,
+        manifest::{validate_manifest, validate_manifest_document},
         model::{AdapterKind, SourceCapabilities, ValidatedSource},
         service::ensure_download_allowed,
     },
@@ -154,6 +154,54 @@ fn manifest_validation_rejects_cross_origin_endpoint_templates() {
 
     assert!(validate_manifest(valid, &base).is_ok());
     assert!(validate_manifest(&invalid, &base).is_err());
+}
+
+#[test]
+fn source_manifest_v1_maps_nested_json_without_executable_code() {
+    let base = Url::parse("https://manga.example").unwrap();
+    let manifest = include_str!("../../examples/source-manifest.example.json");
+    let source = validate_manifest(manifest, &base).unwrap();
+    assert_eq!(
+        validate_manifest_document(manifest).unwrap().adapter_kind,
+        AdapterKind::Manifest
+    );
+    let search = parse_manifest_search(
+        &source,
+        r#"{"payload":{"results":[{"slug":"moon","name":"Moon Panels","links":{"details":"/manga/moon"},"art":{"cover":"https://cdn.manga.example/moon.webp"},"synopsis":"Quiet."}],"hasMore":true}}"#,
+    )
+    .unwrap();
+    let chapters = parse_manifest_chapters(
+        &source,
+        r#"{"data":{"chapters":[{"slug":"moon-1","label":"Chapter 1","href":"/chapter/moon-1"}]}}"#,
+    )
+    .unwrap();
+    let pages = parse_manifest_pages(
+        &source,
+        r#"{"data":{"images":[{"src":"https://cdn.manga.example/001.webp","caption":"Cover"}]}}"#,
+    )
+    .unwrap();
+
+    assert_eq!(source.config["id"], "example.moon-manga");
+    assert_eq!(search.items[0].remote_id, "moon");
+    assert_eq!(search.items[0].title, "Moon Panels");
+    assert!(search.has_next_page);
+    assert_eq!(chapters[0].remote_id, "moon-1");
+    assert_eq!(pages[0].label, "Cover");
+
+    assert!(
+        validate_manifest(
+            &manifest.replace("$.payload.results", "$..results[?(@.script)]"),
+            &base,
+        )
+        .is_err()
+    );
+    assert!(
+        validate_manifest(
+            &manifest.replace("https://manga.example\"", "https://evil.example\""),
+            &base,
+        )
+        .is_err()
+    );
 }
 
 #[test]

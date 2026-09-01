@@ -62,6 +62,54 @@ struct ManifestPageItem {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct ManifestMappingConfig {
+    #[serde(default)]
+    mappings: Option<ManifestMappingsConfig>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ManifestMappingsConfig {
+    search: SearchMappingsConfig,
+    chapters: ChapterMappingsConfig,
+    pages: PageMappingsConfig,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SearchMappingsConfig {
+    items: String,
+    id: String,
+    title: String,
+    url: String,
+    #[serde(default)]
+    cover_url: Option<String>,
+    #[serde(default)]
+    summary: Option<String>,
+    #[serde(default)]
+    has_next_page: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ChapterMappingsConfig {
+    items: String,
+    id: String,
+    title: String,
+    url: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PageMappingsConfig {
+    items: String,
+    url: String,
+    #[serde(default)]
+    label: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct HtmlProfileConfig {
     selectors: HtmlSelectorConfig,
 }
@@ -91,6 +139,9 @@ pub fn parse_manifest_search(source: &ValidatedSource, json: &str) -> AppResult<
     }
     if json.len() > 4 * 1024 * 1024 {
         return Err(validation("Ответ поиска больше 4 МБ."));
+    }
+    if let Some(mappings) = manifest_mappings(source)? {
+        return parse_mapped_search(source, json, &mappings.search);
     }
     let response: ManifestSearchResponse = serde_json::from_str(json)
         .map_err(|error| validation(&format!("Источник вернул неверный JSON поиска: {error}")))?;
@@ -189,6 +240,9 @@ pub fn parse_manifest_chapters(
 ) -> AppResult<Vec<RemoteChapter>> {
     ensure_adapter(source, AdapterKind::Manifest)?;
     ensure_payload_size(json, 4 * 1024 * 1024, "Ответ со списком глав больше 4 МБ.")?;
+    if let Some(mappings) = manifest_mappings(source)? {
+        return parse_mapped_chapters(source, json, &mappings.chapters);
+    }
     let response: ManifestChaptersResponse = serde_json::from_str(json)
         .map_err(|error| validation(&format!("Источник вернул неверный JSON глав: {error}")))?;
     let policy = HttpPolicy::for_source(&source.base_url)?;
@@ -211,6 +265,9 @@ pub fn parse_manifest_chapters(
 pub fn parse_manifest_pages(source: &ValidatedSource, json: &str) -> AppResult<Vec<RemotePage>> {
     ensure_adapter(source, AdapterKind::Manifest)?;
     ensure_payload_size(json, 4 * 1024 * 1024, "Ответ со страницами больше 4 МБ.")?;
+    if let Some(mappings) = manifest_mappings(source)? {
+        return parse_mapped_pages(source, json, &mappings.pages);
+    }
     let response: ManifestPagesResponse = serde_json::from_str(json)
         .map_err(|error| validation(&format!("Источник вернул неверный JSON страниц: {error}")))?;
     response
@@ -232,6 +289,150 @@ pub fn parse_manifest_pages(source: &ValidatedSource, json: &str) -> AppResult<V
             })
         })
         .collect()
+}
+
+fn manifest_mappings(source: &ValidatedSource) -> AppResult<Option<ManifestMappingsConfig>> {
+    serde_json::from_value::<ManifestMappingConfig>(source.config.clone())
+        .map(|config| config.mappings)
+        .map_err(|_| validation("Сохранённые mappings manifest повреждены."))
+}
+
+fn parse_mapped_search(
+    source: &ValidatedSource,
+    json: &str,
+    mappings: &SearchMappingsConfig,
+) -> AppResult<RemoteSearchPage> {
+    let root: serde_json::Value = serde_json::from_str(json)
+        .map_err(|_| validation("Источник вернул неверный JSON поиска."))?;
+    let values = mapped_array(&root, &mappings.items, "search items")?;
+    let policy = HttpPolicy::for_source(&source.base_url)?;
+    let mut items = Vec::with_capacity(values.len().min(200));
+    for value in values.iter().take(200) {
+        let id = mapped_string(value, &mappings.id, "id")?;
+        let title = mapped_string(value, &mappings.title, "title")?;
+        validate_remote_identity(id, title)?;
+        let url = policy
+            .resolve(mapped_string(value, &mappings.url, "url")?)?
+            .to_string();
+        let cover_url = mappings
+            .cover_url
+            .as_deref()
+            .and_then(|path| mapped_optional_string(value, path))
+            .map(|cover| resolve_image_url(source, cover).map(|url| url.to_string()))
+            .transpose()?;
+        let summary = mappings
+            .summary
+            .as_deref()
+            .and_then(|path| mapped_optional_string(value, path))
+            .and_then(|summary| normalize_optional(Some(summary), 4_000));
+        items.push(RemoteMangaSummary {
+            remote_id: id.to_string(),
+            title: normalize_text(title),
+            url,
+            cover_url,
+            summary,
+            content_kind: Default::default(),
+            author: None,
+            acquisition_url: None,
+            format: None,
+        });
+    }
+    let has_next_page = mappings
+        .has_next_page
+        .as_deref()
+        .and_then(|path| mapped_value(&root, path))
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false);
+    Ok(RemoteSearchPage {
+        items,
+        has_next_page,
+    })
+}
+
+fn parse_mapped_chapters(
+    source: &ValidatedSource,
+    json: &str,
+    mappings: &ChapterMappingsConfig,
+) -> AppResult<Vec<RemoteChapter>> {
+    let root: serde_json::Value = serde_json::from_str(json)
+        .map_err(|_| validation("Источник вернул неверный JSON глав."))?;
+    let values = mapped_array(&root, &mappings.items, "chapters items")?;
+    let policy = HttpPolicy::for_source(&source.base_url)?;
+    values
+        .iter()
+        .take(5_000)
+        .map(|value| {
+            let id = mapped_string(value, &mappings.id, "chapter id")?;
+            let title = mapped_string(value, &mappings.title, "chapter title")?;
+            validate_remote_identity(id, title)?;
+            Ok(RemoteChapter {
+                remote_id: id.to_string(),
+                title: normalize_text(title),
+                url: policy
+                    .resolve(mapped_string(value, &mappings.url, "chapter url")?)?
+                    .to_string(),
+                attribution: None,
+            })
+        })
+        .collect()
+}
+
+fn parse_mapped_pages(
+    source: &ValidatedSource,
+    json: &str,
+    mappings: &PageMappingsConfig,
+) -> AppResult<Vec<RemotePage>> {
+    let root: serde_json::Value = serde_json::from_str(json)
+        .map_err(|_| validation("Источник вернул неверный JSON страниц."))?;
+    let values = mapped_array(&root, &mappings.items, "pages items")?;
+    values
+        .iter()
+        .take(2_000)
+        .enumerate()
+        .map(|(index, value)| {
+            let url = resolve_image_url(source, mapped_string(value, &mappings.url, "page url")?)?;
+            let label = mappings
+                .label
+                .as_deref()
+                .and_then(|path| mapped_optional_string(value, path))
+                .and_then(|label| normalize_optional(Some(label), 200))
+                .unwrap_or_else(|| label_from_url(&url, index));
+            Ok(RemotePage {
+                index: index as u32,
+                label,
+                url: url.to_string(),
+            })
+        })
+        .collect()
+}
+
+fn mapped_array<'a>(
+    root: &'a serde_json::Value,
+    path: &str,
+    field: &str,
+) -> AppResult<&'a Vec<serde_json::Value>> {
+    mapped_value(root, path)
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| validation(&format!("Manifest mapping {field} не указывает на массив.")))
+}
+
+fn mapped_string<'a>(root: &'a serde_json::Value, path: &str, field: &str) -> AppResult<&'a str> {
+    mapped_optional_string(root, path)
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| validation(&format!("Manifest mapping {field} не указывает на строку.")))
+}
+
+fn mapped_optional_string<'a>(root: &'a serde_json::Value, path: &str) -> Option<&'a str> {
+    mapped_value(root, path).and_then(serde_json::Value::as_str)
+}
+
+fn mapped_value<'a>(root: &'a serde_json::Value, path: &str) -> Option<&'a serde_json::Value> {
+    if path == "$" {
+        return Some(root);
+    }
+    path.strip_prefix("$.")?
+        .split('.')
+        .try_fold(root, |value, segment| value.get(segment))
 }
 
 pub fn parse_html_chapters(source: &ValidatedSource, html: &str) -> AppResult<Vec<RemoteChapter>> {

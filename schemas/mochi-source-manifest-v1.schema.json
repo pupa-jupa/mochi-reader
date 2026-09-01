@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mochi-reader.local/schemas/mochi-source-manifest-v1.schema.json",
+  "title": "Mochi Source Manifest v1",
+  "description": "Declarative JSON/REST manga source contract for Mochi Reader.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "kind",
+    "allowedDomains",
+    "baseUrl",
+    "endpoints",
+    "pagination",
+    "mappings",
+    "formats",
+    "capabilities"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "format": "uri-reference" },
+    "schemaVersion": { "const": 1 },
+    "id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 100,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "kind": { "const": "manga" },
+    "allowedDomains": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "format": "uri",
+        "pattern": "^https://[^/?#]+/?$"
+      }
+    },
+    "baseUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "endpoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["search", "details", "chapters", "pages"],
+      "properties": {
+        "search": { "$ref": "#/$defs/endpoint" },
+        "details": { "$ref": "#/$defs/endpoint" },
+        "chapters": { "$ref": "#/$defs/endpoint" },
+        "pages": { "$ref": "#/$defs/endpoint" }
+      }
+    },
+    "pagination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "start"],
+      "properties": {
+        "kind": { "const": "page" },
+        "start": { "const": 1 }
+      }
+    },
+    "mappings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["search", "chapters", "pages"],
+      "properties": {
+        "search": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["items", "id", "title", "url"],
+          "properties": {
+            "items": { "$ref": "#/$defs/path" },
+            "id": { "$ref": "#/$defs/path" },
+            "title": { "$ref": "#/$defs/path" },
+            "url": { "$ref": "#/$defs/path" },
+            "coverUrl": { "$ref": "#/$defs/path" },
+            "summary": { "$ref": "#/$defs/path" },
+            "hasNextPage": { "$ref": "#/$defs/path" }
+          }
+        },
+        "chapters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["items", "id", "title", "url"],
+          "properties": {
+            "items": { "$ref": "#/$defs/path" },
+            "id": { "$ref": "#/$defs/path" },
+            "title": { "$ref": "#/$defs/path" },
+            "url": { "$ref": "#/$defs/path" }
+          }
+        },
+        "pages": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["items", "url"],
+          "properties": {
+            "items": { "$ref": "#/$defs/path" },
+            "url": { "$ref": "#/$defs/path" },
+            "label": { "$ref": "#/$defs/path" }
+          }
+        }
+      }
+    },
+    "formats": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "const": "remote_manga" }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["search", "download"],
+      "properties": {
+        "search": { "const": true },
+        "download": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "endpoint": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^\\$(\\.[A-Za-z0-9_-]+)*$"
+    }
+  }
+}
