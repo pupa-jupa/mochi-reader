@@ -80,6 +80,26 @@ describe('manga reader', () => {
     );
   });
 
+  it('supports fit-width, fit-height, and explicit zoom without conflicting states', async () => {
+    const loadPage = vi.fn().mockResolvedValue({ index: 0, dataUrl: 'data:image/png;base64,AAAA' });
+    const { container } = render(
+      <MemoryRouter>
+        <MangaReader initialPageIndex={0} loadPage={loadPage} manifest={manifest} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('img', { name: 'Страница 1' });
+    const viewport = container.querySelector<HTMLElement>('.manga-paged');
+    expect(viewport).toHaveAttribute('data-fit', 'height');
+    fireEvent.click(screen.getByRole('button', { name: 'Настройки манги' }));
+    fireEvent.click(screen.getByRole('button', { name: 'По ширине' }));
+    expect(viewport).toHaveAttribute('data-fit', 'width');
+    fireEvent.click(screen.getByRole('button', { name: 'Увеличить' }));
+    expect(viewport).toHaveAttribute('data-fit', 'custom');
+    fireEvent.click(screen.getByRole('button', { name: 'По высоте' }));
+    expect(viewport).toHaveAttribute('data-fit', 'height');
+  });
+
   it('tracks the page at the center of the vertical reading viewport', async () => {
     const loadPage = vi.fn().mockImplementation(async (index: number) => ({
       index,

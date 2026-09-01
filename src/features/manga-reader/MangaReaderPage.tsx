@@ -40,6 +40,7 @@ import type {
 import { doublePageSpread, resolveMangaAction } from '../../utils/mangaNavigation';
 
 type MangaBackground = 'black' | 'graphite' | 'cream';
+type MangaFit = 'height' | 'width' | 'custom';
 
 function safeIndex(value: number, total: number) {
   if (!Number.isFinite(value) || total <= 0) return 0;
@@ -154,6 +155,7 @@ export function MangaReader({
       : safeIndex(initialPageIndex, manifest.pages.length),
   );
   const [zoom, setZoom] = useState(100);
+  const [fit, setFit] = useState<MangaFit>('height');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [readerNotice, setReaderNotice] = useState<string | null>(null);
   const [pages, setPages] = useState<Record<number, string>>({});
@@ -308,6 +310,11 @@ export function MangaReader({
     });
   }
 
+  function adjustZoom(delta: number) {
+    setFit('custom');
+    setZoom((value) => Math.min(200, Math.max(50, value + delta)));
+  }
+
   useEffect(() => {
     if (!startReadingSession) return;
     let active = true;
@@ -411,9 +418,9 @@ export function MangaReader({
           <button aria-label="Две страницы" aria-pressed={mode === 'double'} onClick={() => changeMode('double')} type="button"><Columns2 aria-hidden="true" /></button>
         </div>
         <div className="manga-zoom">
-          <button aria-label="Уменьшить" onClick={() => setZoom((value) => Math.max(50, value - 10))} type="button"><Minus aria-hidden="true" /></button>
+          <button aria-label="Уменьшить" onClick={() => adjustZoom(-10)} type="button"><Minus aria-hidden="true" /></button>
           <span>{zoom}%</span>
-          <button aria-label="Увеличить" onClick={() => setZoom((value) => Math.min(200, value + 10))} type="button"><Plus aria-hidden="true" /></button>
+          <button aria-label="Увеличить" onClick={() => adjustZoom(10)} type="button"><Plus aria-hidden="true" /></button>
         </div>
         {createBookmark ? <button aria-label="Добавить закладку" className="manga-tool" onClick={() => void saveMangaBookmark()} type="button"><Bookmark aria-hidden="true" /></button> : null}
         <button aria-label="Полный экран" className="manga-tool" onClick={() => void toggleFullscreen()} type="button"><Maximize2 aria-hidden="true" /></button>
@@ -438,7 +445,7 @@ export function MangaReader({
           ))}
         </main>
       ) : (
-        <main className={`manga-paged manga-paged--${mode}`} style={{ '--manga-scale': zoom / 100 } as CSSProperties}>
+        <main className={`manga-paged manga-paged--${mode}`} data-fit={fit} style={{ '--manga-scale': zoom / 100 } as CSSProperties}>
           {visibleIndices.map((pageIndex) => {
             const descriptor = manifest.pages[pageIndex];
             return descriptor ? (
@@ -461,6 +468,7 @@ export function MangaReader({
       {settingsOpen ? (
         <aside aria-label="Настройки манги" className="manga-settings">
           <div><strong>Настройки манги</strong><button aria-label="Закрыть настройки" onClick={() => setSettingsOpen(false)} type="button"><X aria-hidden="true" /></button></div>
+          {!isScrollMode(mode) ? <section><span>Вписать страницу</span><div><button aria-pressed={fit === 'width'} onClick={() => setFit('width')} type="button">По ширине</button><button aria-pressed={fit === 'height'} onClick={() => setFit('height')} type="button">По высоте</button></div></section> : null}
           <section><span><ArrowLeftRight aria-hidden="true" /> Направление</span><div><button aria-pressed={direction === 'ltr'} onClick={() => setDirection('ltr')} type="button">LTR</button><button aria-pressed={direction === 'rtl'} onClick={() => setDirection('rtl')} type="button">RTL</button></div></section>
           <section><span>Фон</span><div className="manga-backgrounds">{(['black', 'graphite', 'cream'] as MangaBackground[]).map((value) => <button aria-label={value} aria-pressed={background === value} data-manga-bg={value} key={value} onClick={() => setBackground(value)} type="button" />)}</div></section>
         </aside>
