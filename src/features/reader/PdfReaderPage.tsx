@@ -591,26 +591,26 @@ export function PdfReader({
   return (
     <div className="pdf-reader">
       <header className="pdf-toolbar">
-        <Link aria-label="Закрыть PDF" className="pdf-tool" to={`/work/${workId}`}><ArrowLeft aria-hidden="true" /></Link>
-        <button aria-label="Миниатюры страниц" aria-pressed={thumbnailsOpen} className="pdf-tool" onClick={() => { setThumbnailsOpen((value) => !value); setSearchOpen(false); setAnnotationsOpen(false); }} type="button"><PanelLeft aria-hidden="true" /></button>
+        <Link aria-label="Закрыть PDF" title="Закрыть PDF" className="pdf-tool" to={`/work/${workId}`}><ArrowLeft aria-hidden="true" /></Link>
+        <button aria-label="Миниатюры страниц" title="Миниатюры страниц" aria-pressed={thumbnailsOpen} className="pdf-tool" onClick={() => { setThumbnailsOpen((value) => !value); setSearchOpen(false); setAnnotationsOpen(false); }} type="button"><PanelLeft aria-hidden="true" /></button>
         <div className="pdf-pagination">
-          <button aria-label="Предыдущая страница" disabled={pageNumber === 1} onClick={() => goTo(pageNumber - 1)} type="button"><ChevronLeft aria-hidden="true" /></button>
-          <input aria-label="Текущая страница PDF" max={document.numPages} min="1" onChange={(event) => goTo(Number(event.target.value))} type="number" value={pageNumber} />
+          <button aria-label="Предыдущая страница" title="Предыдущая страница" disabled={pageNumber === 1} onClick={() => goTo(pageNumber - 1)} type="button"><ChevronLeft aria-hidden="true" /></button>
+          <input aria-label="Текущая страница PDF" title="Текущая страница PDF" max={document.numPages} min="1" onChange={(event) => goTo(Number(event.target.value))} type="number" value={pageNumber} />
           <span>/ {document.numPages}</span>
-          <button aria-label="Следующая страница" disabled={pageNumber === document.numPages} onClick={() => goTo(pageNumber + 1)} type="button"><ChevronRight aria-hidden="true" /></button>
+          <button aria-label="Следующая страница" title="Следующая страница" disabled={pageNumber === document.numPages} onClick={() => goTo(pageNumber + 1)} type="button"><ChevronRight aria-hidden="true" /></button>
         </div>
         <div className="pdf-toolbar__spacer" />
-        <button aria-label="Поиск в PDF" aria-pressed={searchOpen} className="pdf-tool" onClick={() => { setSearchOpen((value) => !value); setThumbnailsOpen(false); setAnnotationsOpen(false); window.setTimeout(() => searchInputRef.current?.focus(), 0); }} type="button"><Search aria-hidden="true" /></button>
-        {createBookmark ? <button aria-label="Добавить закладку PDF" className="pdf-tool" onClick={savePdfBookmark} type="button"><Bookmark aria-hidden="true" /></button> : null}
-        {listAnnotations || createAnnotation ? <button aria-label="Заметки PDF" aria-pressed={annotationsOpen} className="pdf-tool" onClick={() => { setAnnotationsOpen((value) => !value); setSearchOpen(false); setThumbnailsOpen(false); }} type="button"><StickyNote aria-hidden="true" /></button> : null}
+        <button aria-label="Поиск в PDF" title="Поиск в PDF" aria-pressed={searchOpen} className="pdf-tool" onClick={() => { setSearchOpen((value) => !value); setThumbnailsOpen(false); setAnnotationsOpen(false); window.setTimeout(() => searchInputRef.current?.focus(), 0); }} type="button"><Search aria-hidden="true" /></button>
+        {createBookmark ? <button aria-label="Добавить закладку PDF" title="Добавить закладку PDF" className="pdf-tool" onClick={savePdfBookmark} type="button"><Bookmark aria-hidden="true" /></button> : null}
+        {listAnnotations || createAnnotation ? <button aria-label="Заметки PDF" title="Заметки PDF" aria-pressed={annotationsOpen} className="pdf-tool" onClick={() => { setAnnotationsOpen((value) => !value); setSearchOpen(false); setThumbnailsOpen(false); }} type="button"><StickyNote aria-hidden="true" /></button> : null}
         <div className="pdf-zoom">
-          <button aria-label="Уменьшить PDF" onClick={() => setScale((value) => Math.max(0.25, value - 0.1))} type="button"><Minus aria-hidden="true" /></button>
+          <button aria-label="Уменьшить PDF" title="Уменьшить PDF" onClick={() => setScale((value) => Math.max(0.25, value - 0.1))} type="button"><Minus aria-hidden="true" /></button>
           <span>{Math.round(scale * 100)}%</span>
-          <button aria-label="Увеличить PDF" onClick={() => setScale((value) => Math.min(4, value + 0.1))} type="button"><Plus aria-hidden="true" /></button>
+          <button aria-label="Увеличить PDF" title="Увеличить PDF" onClick={() => setScale((value) => Math.min(4, value + 0.1))} type="button"><Plus aria-hidden="true" /></button>
         </div>
-        <button aria-label="По ширине" className="pdf-tool" onClick={fitWidth} type="button"><Rows3 aria-hidden="true" /></button>
-        <button aria-label="Вписать страницу" className="pdf-tool" onClick={fitPage} type="button"><Expand aria-hidden="true" /></button>
-        <button aria-label="Полный экран" className="pdf-tool" onClick={() => void toggleFullscreen()} type="button"><Maximize2 aria-hidden="true" /></button>
+        <button aria-label="По ширине" title="По ширине" className="pdf-tool" onClick={fitWidth} type="button"><Rows3 aria-hidden="true" /></button>
+        <button aria-label="Вписать страницу" title="Вписать страницу" className="pdf-tool" onClick={fitPage} type="button"><Expand aria-hidden="true" /></button>
+        <button aria-label="Полный экран" title="Полный экран" className="pdf-tool" onClick={() => void toggleFullscreen()} type="button"><Maximize2 aria-hidden="true" /></button>
       </header>
 
       {selectionSnapshot && !selectionNoteOpen ? (
