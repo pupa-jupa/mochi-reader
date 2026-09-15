@@ -409,22 +409,22 @@ export function MangaReader({
   return (
     <div className="manga-reader" data-background={background} data-mode={mode}>
       <header className="manga-toolbar">
-        <Link aria-label="Закрыть мангу" className="manga-tool" to={backTo}><ArrowLeft aria-hidden="true" /></Link>
+        <Link aria-label="Закрыть мангу" title="Закрыть мангу" className="manga-tool" to={backTo}><ArrowLeft aria-hidden="true" /></Link>
         <div className="manga-title"><strong>{manifest.title}</strong><span>{index + 1} из {manifest.pages.length}</span></div>
         <div aria-label="Режим отображения" className="manga-modes" role="group">
-          <button aria-label="Вертикальная лента" aria-pressed={mode === 'vertical'} onClick={() => changeMode('vertical')} type="button"><Rows3 aria-hidden="true" /></button>
-          <button aria-label="Вебтун" aria-pressed={mode === 'webtoon'} onClick={() => changeMode('webtoon')} type="button"><GalleryVerticalEnd aria-hidden="true" /></button>
-          <button aria-label="Одна страница" aria-pressed={mode === 'single'} onClick={() => changeMode('single')} type="button"><Square aria-hidden="true" /></button>
-          <button aria-label="Две страницы" aria-pressed={mode === 'double'} onClick={() => changeMode('double')} type="button"><Columns2 aria-hidden="true" /></button>
+          <button aria-label="Вертикальная лента" title="Вертикальная лента" aria-pressed={mode === 'vertical'} onClick={() => changeMode('vertical')} type="button"><Rows3 aria-hidden="true" /></button>
+          <button aria-label="Вебтун" title="Вебтун" aria-pressed={mode === 'webtoon'} onClick={() => changeMode('webtoon')} type="button"><GalleryVerticalEnd aria-hidden="true" /></button>
+          <button aria-label="Одна страница" title="Одна страница" aria-pressed={mode === 'single'} onClick={() => changeMode('single')} type="button"><Square aria-hidden="true" /></button>
+          <button aria-label="Две страницы" title="Две страницы" aria-pressed={mode === 'double'} onClick={() => changeMode('double')} type="button"><Columns2 aria-hidden="true" /></button>
         </div>
         <div className="manga-zoom">
-          <button aria-label="Уменьшить" onClick={() => adjustZoom(-10)} type="button"><Minus aria-hidden="true" /></button>
+          <button aria-label="Уменьшить" title="Уменьшить" onClick={() => adjustZoom(-10)} type="button"><Minus aria-hidden="true" /></button>
           <span>{zoom}%</span>
-          <button aria-label="Увеличить" onClick={() => adjustZoom(10)} type="button"><Plus aria-hidden="true" /></button>
+          <button aria-label="Увеличить" title="Увеличить" onClick={() => adjustZoom(10)} type="button"><Plus aria-hidden="true" /></button>
         </div>
-        {createBookmark ? <button aria-label="Добавить закладку" className="manga-tool" onClick={() => void saveMangaBookmark()} type="button"><Bookmark aria-hidden="true" /></button> : null}
-        <button aria-label="Полный экран" className="manga-tool" onClick={() => void toggleFullscreen()} type="button"><Maximize2 aria-hidden="true" /></button>
-        <button aria-label="Настройки манги" className="manga-tool" onClick={() => setSettingsOpen((value) => !value)} type="button"><Settings2 aria-hidden="true" /></button>
+        {createBookmark ? <button aria-label="Добавить закладку" title="Добавить закладку" className="manga-tool" onClick={() => void saveMangaBookmark()} type="button"><Bookmark aria-hidden="true" /></button> : null}
+        <button aria-label="Полный экран" title="Полный экран" className="manga-tool" onClick={() => void toggleFullscreen()} type="button"><Maximize2 aria-hidden="true" /></button>
+        <button aria-label="Настройки манги" title="Настройки манги" className="manga-tool" onClick={() => setSettingsOpen((value) => !value)} type="button"><Settings2 aria-hidden="true" /></button>
       </header>
 
       {isScrollMode(mode) ? (

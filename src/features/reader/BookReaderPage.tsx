@@ -618,22 +618,22 @@ export function BookReader({
   return (
     <div className="book-reader" data-reader-theme={preferences.theme} style={readerStyle}>
       <header className="reader-toolbar">
-        <Link aria-label="Закрыть книгу" className="reader-tool" onClick={flushPosition} to={`/work/${document.workId}`}>
+        <Link aria-label="Закрыть книгу" title="Закрыть книгу" className="reader-tool" onClick={flushPosition} to={`/work/${document.workId}`}>
           <ArrowLeft aria-hidden="true" />
         </Link>
-        <button aria-label="Оглавление" className="reader-tool" onClick={() => { setTocOpen((value) => !value); setAnnotationsOpen(false); setSettingsOpen(false); }} type="button">
+        <button aria-label="Оглавление" title="Оглавление" className="reader-tool" onClick={() => { setTocOpen((value) => !value); setAnnotationsOpen(false); setSettingsOpen(false); }} type="button">
           <Menu aria-hidden="true" />
         </button>
         <div className="reader-title"><strong>{document.title}</strong><span>{chapter?.title}</span></div>
-        <select aria-label="Текущая глава" onChange={(event) => goToChapter(document.chapters.findIndex((item) => item.id === event.target.value))} value={chapter?.id}>
+        <select aria-label="Текущая глава" title="Текущая глава" onChange={(event) => goToChapter(document.chapters.findIndex((item) => item.id === event.target.value))} value={chapter?.id}>
           {document.chapters.map((item, index) => <option key={item.id} value={item.id}>{index + 1}. {item.title}</option>)}
         </select>
         <div className="reader-toolbar__actions">
-          <button aria-label="Поиск в книге" className="reader-tool" onClick={() => setSearchOpen((value) => !value)} type="button"><Search aria-hidden="true" /></button>
-          <button aria-label="Добавить закладку" className="reader-tool" onClick={() => saveBookmark()} type="button"><Bookmark aria-hidden="true" /></button>
-          <button aria-label="Заметки" aria-pressed={annotationsOpen} className="reader-tool" onClick={() => { setAnnotationsOpen((value) => !value); setTocOpen(false); setSettingsOpen(false); }} type="button"><StickyNote aria-hidden="true" /></button>
-          <button aria-label="Полный экран" className="reader-tool" onClick={() => void toggleFullscreen()} type="button"><Maximize2 aria-hidden="true" /></button>
-          <button aria-label="Настройки текста" className="reader-tool" onClick={() => { setSettingsOpen((value) => !value); setAnnotationsOpen(false); setTocOpen(false); }} type="button"><Settings2 aria-hidden="true" /></button>
+          <button aria-label="Поиск в книге" title="Поиск в книге" className="reader-tool" onClick={() => setSearchOpen((value) => !value)} type="button"><Search aria-hidden="true" /></button>
+          <button aria-label="Добавить закладку" title="Добавить закладку" className="reader-tool" onClick={() => saveBookmark()} type="button"><Bookmark aria-hidden="true" /></button>
+          <button aria-label="Заметки" title="Заметки" aria-pressed={annotationsOpen} className="reader-tool" onClick={() => { setAnnotationsOpen((value) => !value); setTocOpen(false); setSettingsOpen(false); }} type="button"><StickyNote aria-hidden="true" /></button>
+          <button aria-label="Полный экран" title="Полный экран" className="reader-tool" onClick={() => void toggleFullscreen()} type="button"><Maximize2 aria-hidden="true" /></button>
+          <button aria-label="Настройки текста" title="Настройки текста" className="reader-tool" onClick={() => { setSettingsOpen((value) => !value); setAnnotationsOpen(false); setTocOpen(false); }} type="button"><Settings2 aria-hidden="true" /></button>
         </div>
       </header>
 
