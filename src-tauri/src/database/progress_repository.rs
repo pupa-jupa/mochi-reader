@@ -85,6 +85,11 @@ impl<'connection> ProgressRepository<'connection> {
     }
 
     fn query_one(&self, column: &str, value: &str) -> AppResult<Option<ReadingProgress>> {
+        if column != "work_id" && column != "content_identity" {
+            return Err(AppError::Validation {
+                message: "Invalid column name for progress query.".to_string(),
+            });
+        }
         let sql = format!(
             "SELECT content_identity, work_id, locator_json, percent, reader_mode, updated_at
              FROM reading_progress WHERE {column} = ?1"
