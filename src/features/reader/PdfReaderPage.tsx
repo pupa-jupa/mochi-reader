@@ -75,11 +75,13 @@ function annotationKindLabel(kind: AnnotationKind) {
   return 'Цитата';
 }
 
+const dateFormatter = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' });
+
 function annotationDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? ''
-    : new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(date);
+    : dateFormatter.format(date);
 }
 
 export type PdfTextLayerRenderer = (
