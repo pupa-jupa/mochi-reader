@@ -262,11 +262,13 @@ function locationLabel(annotation: ReaderAnnotation) {
   return 'Глава книги';
 }
 
+const dateFormatter = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', year: 'numeric' });
+
 function formatDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? ''
-    : new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
+    : dateFormatter.format(date);
 }
 
 function annotationsAsText(annotations: ReaderAnnotation[]) {

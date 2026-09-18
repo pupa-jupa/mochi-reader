@@ -9,6 +9,8 @@ import { Mascot } from '../../components/Mascot';
 import { libraryStore } from '../../stores/libraryStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 
+const dateFormatter = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'long' });
+
 export function DashboardPage() {
   const items = useStore(libraryStore, (state) => state.items);
   const status = useStore(libraryStore, (state) => state.status);
@@ -16,7 +18,7 @@ export function DashboardPage() {
   const showMascot = useSettingsStore((state) => state.showMascot);
   const reading = items.find((item) => item.status === 'reading' || item.progressPercent > 0);
   const readingProgress = Math.round(reading?.progressPercent ?? 0);
-  const today = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'long' }).format(new Date());
+  const today = dateFormatter.format(new Date());
 
   useEffect(() => {
     if (status === 'idle') void libraryStore.getState().load();

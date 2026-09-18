@@ -97,9 +97,11 @@ function LoadingState({ label }: { label: string }) {
   return <div className="persistent-loading"><span className="spinner" /><p>{label}</p></div>;
 }
 
+const dateFormatter = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', year: 'numeric' });
+
 function formatDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? ''
-    : new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
+    : dateFormatter.format(date);
 }

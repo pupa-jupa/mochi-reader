@@ -193,14 +193,16 @@ function formatDuration(value: number | null) {
   return remainder > 0 ? `${hours} ч ${remainder} мин` : `${hours} ч`;
 }
 
+const dateFormatter = new Intl.DateTimeFormat('ru', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
 function formatDateTime(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? ''
-    : new Intl.DateTimeFormat('ru', {
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).format(date);
+    : dateFormatter.format(date);
 }
