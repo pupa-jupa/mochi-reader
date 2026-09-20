@@ -1,0 +1,3 @@
+## 2024-05-17 - Avoid Expensive Regex and Transformations on Keystroke in React
+**Learning:** Performing expensive operations like generating a searchable 'haystack' from a large string (like a full HTML chapter via regex replacement and `.toLocaleLowerCase()`) on every keystroke during a search can cause severe UI jank due to synchronous main thread blocking in React components.
+**Action:** Always separate the static or slow-changing "haystack" generation from the frequent "needle" queries. Memoize the expensive transformation so it runs only when the raw content changes, not when the user types.
