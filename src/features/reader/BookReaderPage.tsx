@@ -295,12 +295,22 @@ export function BookReader({
     [chapter?.html],
   );
 
+  // ⚡ Bolt: Memoize the searchable text generation to prevent UI jank.
+  // Extracting the expensive regex replacement and lowercase operation from the
+  // `matchCount` hook (which fires on every keystroke) ensures this only runs
+  // when `cleanHtml` (the chapter) changes.
+  // Impact: O(N) regex operation over potentially MBs of text is reduced to running
+  // once per chapter load instead of per character typed.
+  const searchableText = useMemo(
+    () => cleanHtml.replace(/<[^>]+>/g, ' ').toLocaleLowerCase(),
+    [cleanHtml],
+  );
+
   const matchCount = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
     if (!needle) return 0;
-    const haystack = cleanHtml.replace(/<[^>]+>/g, ' ').toLocaleLowerCase();
-    return haystack.split(needle).length - 1;
-  }, [cleanHtml, query]);
+    return searchableText.split(needle).length - 1;
+  }, [searchableText, query]);
 
   const chapterAnnotations = useMemo(
     () =>
