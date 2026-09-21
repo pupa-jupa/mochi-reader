@@ -1,0 +1,3 @@
+## 2023-10-27 - Dashboard Page Performance Bottleneck
+**Learning:** In the React frontend, repeatedly calling `Intl.DateTimeFormat` on every render is a common anti-pattern that slows down performance, as instantiating formatting objects is expensive. Additionally, relying on multiple Array methods (`.find`, `.filter`) to extract different sets of stats from a single list of items in the render loop introduces redundant iteration.
+**Action:** When extracting multiple insights from large collections (like `items`), perform a single pass using a `for...of` loop within a `useMemo` block. Hoist expensive instantiations (like `Intl.DateTimeFormat`) outside the component to cache the formatting instance.

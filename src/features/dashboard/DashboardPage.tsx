@@ -1,5 +1,5 @@
 import { ArrowRight, BookOpen, Database, Feather, Plus, Sparkles } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from 'zustand';
 
@@ -9,14 +9,35 @@ import { Mascot } from '../../components/Mascot';
 import { libraryStore } from '../../stores/libraryStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 
+// Cache formatter to avoid expensive re-creation on every render
+const dateFormatter = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'long' });
+
 export function DashboardPage() {
   const items = useStore(libraryStore, (state) => state.items);
   const status = useStore(libraryStore, (state) => state.status);
   const total = useStore(libraryStore, (state) => state.total);
   const showMascot = useSettingsStore((state) => state.showMascot);
-  const reading = items.find((item) => item.status === 'reading' || item.progressPercent > 0);
+
+  // Calculate stats in a single pass instead of multiple find/filter calls (O(N) vs O(3N))
+  const stats = useMemo(() => {
+    let readingItem = undefined;
+    let readingCount = 0;
+    let favoriteCount = 0;
+
+    for (const item of items) {
+      if (item.status === 'reading') readingCount++;
+      if (item.favorite) favoriteCount++;
+      if (!readingItem && (item.status === 'reading' || item.progressPercent > 0)) {
+        readingItem = item;
+      }
+    }
+
+    return { readingItem, readingCount, favoriteCount };
+  }, [items]);
+
+  const reading = stats.readingItem;
   const readingProgress = Math.round(reading?.progressPercent ?? 0);
-  const today = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'long' }).format(new Date());
+  const today = dateFormatter.format(new Date());
 
   useEffect(() => {
     if (status === 'idle') void libraryStore.getState().load();
@@ -71,8 +92,8 @@ export function DashboardPage() {
         <div className="journal-marginalia__heading"><span>Статистика</span><strong>Библиотека</strong></div>
         <dl>
           <div><dt>всего</dt><dd>{total}</dd></div>
-          <div><dt>читаю</dt><dd>{items.filter((item) => item.status === 'reading').length}</dd></div>
-          <div><dt>избранное</dt><dd>{items.filter((item) => item.favorite).length}</dd></div>
+          <div><dt>читаю</dt><dd>{stats.readingCount}</dd></div>
+          <div><dt>избранное</dt><dd>{stats.favoriteCount}</dd></div>
         </dl>
         <div className="journal-marginalia__note"><Database aria-hidden="true" /><span>Данные хранятся локально.</span></div>
       </section>
