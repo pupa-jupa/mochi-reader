@@ -250,7 +250,7 @@ export function WorkDetailsPage({ bridge = desktopBridge }: WorkDetailsPageProps
               </label>
               <div className="metadata-form__actions">
                 <Button onClick={cancelEditing} variant="ghost">Отмена</Button>
-                <Button aria-label="Сохранить информацию" disabled={saving || !metadata.title.trim()} type="submit"><Save aria-hidden="true" /> {saving ? 'Сохраняю…' : 'Сохранить'}</Button>
+                <Button aria-label="Сохранить информацию" disabled={saving || !metadata.title.trim()} type="submit">{saving ? <span className="spinner" /> : <Save aria-hidden="true" />} {saving ? 'Сохраняю…' : 'Сохранить'}</Button>
               </div>
             </form>
           ) : null}

@@ -172,7 +172,9 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
             </select>
           </label>
           <button aria-label="Редактировать коллекцию" className="button button--secondary" disabled={busy} onClick={startEditing} type="button"><Pencil aria-hidden="true" /> Изменить</button>
-          <button aria-label={confirmingDelete ? 'Подтвердить удаление коллекции' : 'Удалить коллекцию'} className="button button--ghost" disabled={busy} onClick={() => void deleteShelf()} type="button"><Trash2 aria-hidden="true" /> {confirmingDelete ? 'Точно удалить?' : 'Удалить'}</button>
+          <button aria-label={confirmingDelete ? 'Подтвердить удаление коллекции' : 'Удалить коллекцию'} className="button button--ghost" disabled={busy} onClick={() => void deleteShelf()} type="button">
+            {busy && confirmingDelete ? <span className="spinner" /> : <Trash2 aria-hidden="true" />} {confirmingDelete ? (busy ? 'Удаляю…' : 'Точно удалить?') : 'Удалить'}
+          </button>
         </div>
       </header>
       {editing ? (
@@ -185,8 +187,10 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
             <label htmlFor="collection-details-description">Описание коллекции</label>
             <textarea id="collection-details-description" maxLength={2_000} onChange={(event) => setDescriptionDraft(event.target.value)} rows={3} value={descriptionDraft} />
           </div>
-          <button aria-label="Сохранить коллекцию" className="button button--primary" disabled={busy || !titleDraft.trim()} type="submit"><Save aria-hidden="true" /> Сохранить</button>
-          <button aria-label="Отменить редактирование" className="icon-button" onClick={() => setEditing(false)} type="button"><X aria-hidden="true" /></button>
+          <button aria-label="Сохранить коллекцию" className="button button--primary" disabled={busy || !titleDraft.trim()} type="submit">
+            {busy ? <span className="spinner" /> : <Save aria-hidden="true" />} {busy ? 'Сохраняю…' : 'Сохранить'}
+          </button>
+          <button aria-label="Отменить редактирование" className="icon-button" onClick={() => setEditing(false)} title="Отменить редактирование" type="button"><X aria-hidden="true" /></button>
         </form>
       ) : null}
       {confirmingDelete ? <div className="notice notice--error"><span>Удалится только коллекция. Книги, прогресс и заметки останутся.</span><button onClick={() => setConfirmingDelete(false)} type="button">Отмена</button></div> : null}
