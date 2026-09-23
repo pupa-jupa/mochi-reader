@@ -1,0 +1,3 @@
+## 2024-05-27 - Memoizing Repeated Complex Elements
+**Learning:** Manga pages in `MangaReaderPage.tsx` (`MangaPageFrame` and `LazyMangaPage`) are rendered repeatedly (up to 100s of times) on a single scrollable or double-paged layout. Whenever the user modifies viewing options (fit, scale) or merely navigates between pages, all of these expensive image components would re-render if not memoized, which can severely impact framerate and responsiveness.
+**Action:** Use `React.memo` for list items and heavily repeated elements like manga pages to prevent unnecessary re-renders when parent state updates independently of their props.
