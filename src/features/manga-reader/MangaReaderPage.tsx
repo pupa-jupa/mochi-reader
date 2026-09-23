@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import {
+  memo,
   type CSSProperties,
   type Ref,
   useCallback,
@@ -479,7 +480,7 @@ export function MangaReader({
   );
 }
 
-function MangaPageFrame({
+const MangaPageFrame = memo(function MangaPageFrame({
   descriptor,
   dataUrl,
   error,
@@ -497,9 +498,9 @@ function MangaPageFrame({
       {error ? <span className="manga-page__error">{error}</span> : null}
     </div>
   );
-}
+});
 
-function LazyMangaPage({
+const LazyMangaPage = memo(function LazyMangaPage({
   descriptor,
   dataUrl,
   error,
@@ -530,4 +531,4 @@ function LazyMangaPage({
     return () => observer.disconnect();
   }, [dataUrl, descriptor.index, ensurePage, error]);
   return <MangaPageFrame dataUrl={dataUrl} descriptor={descriptor} error={error} rootRef={root} />;
-}
+});
