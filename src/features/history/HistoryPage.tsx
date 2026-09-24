@@ -149,18 +149,6 @@ export function HistoryPage({ bridge }: HistoryPageProps) {
 }
 
 function groupHistory(items: HistoryEntry[]) {
-  const grouped = new Map<HistoryGroupName, HistoryEntry[]>(
-    groupOrder.map((name) => [name, []]),
-  );
-  for (const entry of items) grouped.get(historyGroup(entry.startedAt))?.push(entry);
-  return groupOrder
-    .map((name) => ({ name, items: grouped.get(name) ?? [] }))
-    .filter((group) => group.items.length > 0);
-}
-
-function historyGroup(value: string): HistoryGroupName {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Раньше';
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today);
@@ -168,6 +156,26 @@ function historyGroup(value: string): HistoryGroupName {
   const week = new Date(today);
   const day = week.getDay() || 7;
   week.setDate(week.getDate() - day + 1);
+
+  const grouped = new Map<HistoryGroupName, HistoryEntry[]>(
+    groupOrder.map((name) => [name, []]),
+  );
+  for (const entry of items) {
+    grouped.get(historyGroup(entry.startedAt, today, yesterday, week))?.push(entry);
+  }
+  return groupOrder
+    .map((name) => ({ name, items: grouped.get(name) ?? [] }))
+    .filter((group) => group.items.length > 0);
+}
+
+function historyGroup(
+  value: string,
+  today: Date,
+  yesterday: Date,
+  week: Date,
+): HistoryGroupName {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Раньше';
   if (date >= today) return 'Сегодня';
   if (date >= yesterday) return 'Вчера';
   if (date >= week) return 'На этой неделе';
@@ -193,14 +201,16 @@ function formatDuration(value: number | null) {
   return remainder > 0 ? `${hours} ч ${remainder} мин` : `${hours} ч`;
 }
 
+const dateFormatter = new Intl.DateTimeFormat('ru', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
 function formatDateTime(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? ''
-    : new Intl.DateTimeFormat('ru', {
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).format(date);
+    : dateFormatter.format(date);
 }
