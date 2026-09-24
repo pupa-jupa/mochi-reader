@@ -1,0 +1,3 @@
+## 2024-03-20 - Hoisting Intl Instantiations and Loop Boundaries
+**Learning:** Instantiating `new Intl.DateTimeFormat` inside utility functions that are called during array mappings (e.g., `formatDateTime` in `HistoryPage.tsx`) incurs significant overhead. Additionally, recalculating boundary logic (like relative dates for history groups) for every item in a list scales poorly when the same boundaries apply to all items.
+**Action:** Extract `Intl.DateTimeFormat` instances to module-level constants. Always check mapping functions and child routines for loop-invariant data, such as generic date boundaries, and hoist them out to the parent before the loop.
