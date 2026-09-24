@@ -108,6 +108,18 @@ function errorMessage(error: unknown) {
   return 'Не удалось открыть произведение. Проверьте исходный файл и повторите попытку.';
 }
 
+
+
+DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+  if (node.tagName === 'A' && node.hasAttribute('href')) {
+    const href = node.getAttribute('href');
+    if (href && !href.startsWith('#')) {
+      node.setAttribute('target', '_blank');
+      node.setAttribute('rel', 'noopener noreferrer');
+    }
+  }
+});
+
 export function BookReaderPage() {
   const { id = '' } = useParams();
   const [searchParams] = useSearchParams();
@@ -291,6 +303,7 @@ export function BookReader({
         USE_PROFILES: { html: true },
         FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'object', 'embed'],
         FORBID_ATTR: ['style'],
+        ADD_ATTR: ['target', 'rel'],
       }),
     [chapter?.html],
   );
