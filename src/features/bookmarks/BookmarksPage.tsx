@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { desktopBridge, isDesktopRuntime, type DesktopBridge } from '../../app/bridge';
 import { SectionEmpty } from '../../components/SectionEmpty';
 import type { BookmarkRecord } from '../../types/persistence';
+import { dateFormatter } from '../../utils/formatters';
 
 interface BookmarksPageProps {
   bridge?: DesktopBridge;
@@ -101,5 +102,5 @@ function formatDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? ''
-    : new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
+    : dateFormatter.format(date);
 }

@@ -50,6 +50,7 @@ import {
   createBookAnnotationLocator,
   resolveBookAnnotationRange,
 } from '../../utils/annotationLocator';
+import { dayMonthFormatter } from '../../utils/formatters';
 
 type ReaderTheme = 'paper' | 'sakura' | 'night';
 type FontFamily = 'serif' | 'sans' | 'mono';
@@ -189,7 +190,7 @@ function annotationDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? ''
-    : new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(date);
+    : dayMonthFormatter.format(date);
 }
 
 function scrollToRenderedAnnotation(root: HTMLElement, annotation: ReaderAnnotation) {

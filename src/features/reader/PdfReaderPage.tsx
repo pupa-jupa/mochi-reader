@@ -41,6 +41,7 @@ import {
   createPdfAnnotationLocator,
   type PdfAnnotationLocator,
 } from '../../utils/pdfAnnotationLocator';
+import { dayMonthFormatter } from '../../utils/formatters';
 
 function savedPage(workId: string) {
   const value = Number(localStorage.getItem(`mochi-reader:pdf-position:${workId}`) ?? 1);
@@ -79,7 +80,7 @@ function annotationDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? ''
-    : new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(date);
+    : dayMonthFormatter.format(date);
 }
 
 export type PdfTextLayerRenderer = (
