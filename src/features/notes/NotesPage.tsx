@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { desktopBridge, isDesktopRuntime, type DesktopBridge } from '../../app/bridge';
 import { Button } from '../../components/Button';
 import { SectionEmpty } from '../../components/SectionEmpty';
+import { dateFormatter } from '../../utils/formatters';
 import type {
   AnnotationExportFormat,
   AnnotationKind,
@@ -266,7 +267,7 @@ function formatDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? ''
-    : new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
+    : dateFormatter.format(date);
 }
 
 function annotationsAsText(annotations: ReaderAnnotation[]) {

@@ -6,6 +6,7 @@ import { desktopBridge, isDesktopRuntime, type DesktopBridge } from '../../app/b
 import { Button } from '../../components/Button';
 import { SectionEmpty } from '../../components/SectionEmpty';
 import type { HistoryEntry, ReaderLocator } from '../../types/persistence';
+import { dateTimeFormatter } from '../../utils/formatters';
 
 interface HistoryPageProps {
   bridge?: DesktopBridge;
@@ -197,10 +198,5 @@ function formatDateTime(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? ''
-    : new Intl.DateTimeFormat('ru', {
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).format(date);
+    : dateTimeFormatter.format(date);
 }
