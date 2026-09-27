@@ -138,12 +138,12 @@ export function SettingsPage({ bridge }: SettingsPageProps) {
         <label className="setting-row">
           <span className="setting-row__icon"><WandSparkles aria-hidden="true" /></span>
           <span><strong>Уменьшить анимации</strong><small>Отключает перемещения и мягкие пружины</small></span>
-          <input checked={reduceMotion} className="switch" onChange={(event) => setReduceMotion(event.target.checked)} type="checkbox" />
+          <input aria-label="Уменьшить анимации" checked={reduceMotion} className="switch" onChange={(event) => setReduceMotion(event.target.checked)} type="checkbox" />
         </label>
         <label className="setting-row">
           <span className="setting-row__icon"><Rabbit aria-hidden="true" /></span>
           <span><strong>Показывать Mochi</strong><small>Иллюстрации в приветствиях и пустых состояниях</small></span>
-          <input checked={showMascot} className="switch" onChange={(event) => setShowMascot(event.target.checked)} type="checkbox" />
+          <input aria-label="Показывать Mochi" checked={showMascot} className="switch" onChange={(event) => setShowMascot(event.target.checked)} type="checkbox" />
         </label>
       </section>
 
