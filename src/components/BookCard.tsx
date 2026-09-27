@@ -1,5 +1,5 @@
 import { BookOpen, FileSearch, FolderHeart, FolderOpen, Heart, Image as ImageIcon, MoreHorizontal, Play, Trash2 } from 'lucide-react';
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import React, { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { WorkSummary } from '../types/library';
@@ -26,7 +26,8 @@ const formatLabels: Record<string, string> = {
   remote_manga: 'ONLINE',
 };
 
-export function BookCard({ work, onToggleFavorite, onRevealSource, onRemove }: BookCardProps) {
+// Optimization: Memoize BookCard to prevent unnecessary re-renders in large library grids
+export const BookCard = React.memo(function BookCard({ work, onToggleFavorite, onRevealSource, onRemove }: BookCardProps) {
   const coverClass = `book-card__cover book-card__cover--${work.kind}`;
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -103,4 +104,4 @@ export function BookCard({ work, onToggleFavorite, onRevealSource, onRemove }: B
       ) : null}
     </article>
   );
-}
+});
