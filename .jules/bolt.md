@@ -1,0 +1,3 @@
+## 2024-05-19 - Binary search for scroll tracking in sequentially ordered DOM children
+**Learning:** MangaReaderPage's vertical scroll tracker (`trackVerticalProgress`) iterated over every single page element inside the scroll event (`querySelectorAll` + `forEach` + `getBoundingClientRect`), causing an O(n) layout thrashing operation per animation frame request. Since the manga page elements are guaranteed to be sequentially ordered top-to-bottom, we can search for the closest element using binary search.
+**Action:** Always prefer binary search (O(log n)) over linear search (O(n)) when determining positions in ordered, continuous DOM structures (like vertical virtualized lists or chapter scroll viewports) during high-frequency events to avoid jank.
