@@ -57,6 +57,7 @@ export function WorkDetailsPage({ bridge = desktopBridge }: WorkDetailsPageProps
   const [work, setWork] = useState<WorkDetails | null>(null);
   const [collections, setCollections] = useState<CollectionSummary[]>([]);
   const [collectionId, setCollectionId] = useState('');
+  const [addingToCollection, setAddingToCollection] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [relinking, setRelinking] = useState(false);
@@ -119,13 +120,16 @@ export function WorkDetailsPage({ bridge = desktopBridge }: WorkDetailsPageProps
   }
 
   async function addToCollection() {
-    if (!work || !collectionId) return;
+    if (!work || !collectionId || addingToCollection) return;
+    setAddingToCollection(true);
     try {
       await bridge.addToCollection(collectionId, work.id);
       const collection = collections.find((item) => item.id === collectionId);
       setNotice(`Добавлено в коллекцию «${collection?.title ?? 'Коллекция'}».`);
     } catch {
       setError('Не удалось добавить произведение в коллекцию.');
+    } finally {
+      setAddingToCollection(false);
     }
   }
 
@@ -267,7 +271,7 @@ export function WorkDetailsPage({ bridge = desktopBridge }: WorkDetailsPageProps
           <div className="details-collection">
             <div><FolderHeart aria-hidden="true" /><span><strong>Добавить в коллекцию</strong><small>Одна книга может быть в нескольких подборках.</small></span></div>
             {collections.length > 0 ? (
-              <div><select aria-label="Коллекция" onChange={(event) => setCollectionId(event.target.value)} value={collectionId}>{collections.map((collection) => <option key={collection.id} value={collection.id}>{collection.title}</option>)}</select><Button aria-label="Добавить в коллекцию" onClick={() => void addToCollection()} variant="secondary">Добавить</Button></div>
+              <div><select aria-label="Коллекция" onChange={(event) => setCollectionId(event.target.value)} value={collectionId}>{collections.map((collection) => <option key={collection.id} value={collection.id}>{collection.title}</option>)}</select><Button aria-label="Добавить в коллекцию" disabled={addingToCollection} onClick={() => void addToCollection()} variant="secondary">{addingToCollection ? <span className="spinner" /> : null} Добавить</Button></div>
             ) : <Link to="/collections">Создать первую коллекцию</Link>}
           </div>
           {notice ? <div aria-live="polite" className="notice notice--success"><span>{notice}</span></div> : null}
