@@ -297,15 +297,33 @@ export function MangaReader({
       const viewportRect = viewport.getBoundingClientRect();
       const center = viewportRect.top + viewport.clientHeight / 2;
       let closestIndex = indexRef.current;
-      let closestDistance = Number.POSITIVE_INFINITY;
-      viewport.querySelectorAll<HTMLElement>('[data-manga-page-index]').forEach((element) => {
-        const rect = element.getBoundingClientRect();
-        const distance = Math.abs(rect.top + rect.height / 2 - center);
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestIndex = Number(element.dataset.mangaPageIndex);
+
+      const elements = Array.from(viewport.querySelectorAll<HTMLElement>('[data-manga-page-index]'));
+      if (elements.length > 0) {
+        // Binary search for the element closest to the center, reducing DOM lookups from O(n) to O(log n)
+        let low = 0;
+        let high = elements.length - 1;
+        let bestDistance = Number.POSITIVE_INFINITY;
+
+        while (low <= high) {
+          const mid = Math.floor((low + high) / 2);
+          const element = elements[mid];
+          const rect = element.getBoundingClientRect();
+          const distance = Math.abs(rect.top + rect.height / 2 - center);
+
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            closestIndex = Number(element.dataset.mangaPageIndex);
+          }
+
+          if (rect.top + rect.height / 2 < center) {
+            low = mid + 1;
+          } else {
+            high = mid - 1;
+          }
         }
-      });
+      }
+
       if (Number.isFinite(closestIndex)) goTo(closestIndex);
     });
   }
