@@ -308,6 +308,7 @@ export function MangaReader({
         while (low <= high) {
           const mid = Math.floor((low + high) / 2);
           const element = elements[mid];
+          if (!element) break;
           const rect = element.getBoundingClientRect();
           const distance = Math.abs(rect.top + rect.height / 2 - center);
 
