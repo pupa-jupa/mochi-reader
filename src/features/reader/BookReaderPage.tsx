@@ -295,12 +295,17 @@ export function BookReader({
     [chapter?.html],
   );
 
+  // ⚡ Bolt: Pre-compute the searchable plain text to avoid running expensive Regex
+  // and string manipulation on every keystroke during chapter search.
+  const searchableText = useMemo(() => {
+    return cleanHtml.replace(/<[^>]+>/g, ' ').toLocaleLowerCase();
+  }, [cleanHtml]);
+
   const matchCount = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
     if (!needle) return 0;
-    const haystack = cleanHtml.replace(/<[^>]+>/g, ' ').toLocaleLowerCase();
-    return haystack.split(needle).length - 1;
-  }, [cleanHtml, query]);
+    return searchableText.split(needle).length - 1;
+  }, [searchableText, query]);
 
   const chapterAnnotations = useMemo(
     () =>
