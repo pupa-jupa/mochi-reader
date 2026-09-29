@@ -1,0 +1,3 @@
+## 2024-05-18 - Heavy string manipulation within search hook dependencies
+**Learning:** In React `useMemo` hooks used for search input processing, placing heavy string manipulations (like removing HTML tags with Regex and converting full chapter strings to lowercase) inside the memo dependency array that includes the `query` itself causes the heavy work to run on *every single keystroke*.
+**Action:** Always separate the computation of the static search "haystack" (which only depends on the source content) from the actual search match execution (which depends on the query and haystack). Memoize them separately.
