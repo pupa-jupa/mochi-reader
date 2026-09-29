@@ -1,0 +1,4 @@
+## 2024-05-18 - [Target attribute manipulation in DOMPurify]
+**Vulnerability:** XSS/Tabnabbing via unsanitized `<a>` tag `target` and `rel` attributes.
+**Learning:** `DOMPurify` by default does not enforce `rel="noopener noreferrer"` when allowing `href` attributes that might be rendered inside the app and clicked, which can be an issue especially for desktop webviews or applications wrapping arbitrary HTML content. Using hooks, we can modify nodes safely, but because DOMPurify is a singleton, hooks must be applied and immediately removed around the `sanitize` call to avoid unintended side-effects across the app.
+**Prevention:** Apply `afterSanitizeAttributes` hooks dynamically to enforce `target="_blank"` and `rel="noopener noreferrer"`, and immediately remove the hook when `DOMPurify.sanitize()` completes.
