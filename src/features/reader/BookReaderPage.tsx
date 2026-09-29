@@ -285,15 +285,26 @@ export function BookReader({
         : null,
   };
 
-  const cleanHtml = useMemo(
-    () =>
-      DOMPurify.sanitize(chapter?.html ?? '', {
-        USE_PROFILES: { html: true },
-        FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'object', 'embed'],
-        FORBID_ATTR: ['style'],
-      }),
-    [chapter?.html],
-  );
+  const cleanHtml = useMemo(() => {
+    DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+      if (node.tagName === 'A' && node.hasAttribute('href')) {
+        const href = node.getAttribute('href');
+        if (href && !href.startsWith('#')) {
+          node.setAttribute('target', '_blank');
+          node.setAttribute('rel', 'noopener noreferrer');
+        }
+      }
+    });
+
+    const result = DOMPurify.sanitize(chapter?.html ?? '', {
+      USE_PROFILES: { html: true },
+      FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'object', 'embed'],
+      FORBID_ATTR: ['style'],
+    });
+
+    DOMPurify.removeHook('afterSanitizeAttributes');
+    return result;
+  }, [chapter?.html]);
 
   const matchCount = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
