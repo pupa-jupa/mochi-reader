@@ -107,7 +107,7 @@ export function LibraryPage({ store = libraryStore, initialFilter = 'all' }: Lib
             value={routeQuery}
           />
           {routeQuery ? (
-            <button aria-label="Очистить поиск" onClick={() => updateRoute({ q: '' })} type="button">
+            <button aria-label="Очистить поиск" onClick={() => { updateRoute({ q: '' }); window.setTimeout(() => searchRef.current?.focus(), 0); }} title="Очистить поиск" type="button">
               <X aria-hidden="true" />
             </button>
           ) : null}

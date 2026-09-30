@@ -1,0 +1,3 @@
+## 2024-05-18 - Tooltips and Focus for Icon-Only Toolbars
+**Learning:** Icon-only toolbars (like in the Reader header) are harder to use without tooltips, and relying solely on `aria-label` hides the name from sighted mouse users. Furthermore, actions that reveal text inputs (like opening search or clearing a search field) create friction if the input isn't automatically focused.
+**Action:** Always include a `title` attribute matching the `aria-label` for icon-only buttons (optionally with keyboard shortcuts if applicable). Ensure that clicking buttons to open or clear search fields automatically sets focus to the input field so users can start typing immediately.
