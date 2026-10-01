@@ -1,0 +1,3 @@
+## 2025-02-23 - Inconsistent Progress Bar Accessibility Attributes
+**Learning:** Progress indicators across the application use inconsistent accessibility attributes. `DashboardPage` correctly uses `role="progressbar"`, `aria-valuemin`, `aria-valuemax`, and `aria-valuenow`, but `BookCard` only uses an `aria-label`. This inconsistency can lead to screen readers not properly interpreting progress bars depending on where they appear in the UI.
+**Action:** Ensure that all progress bar components uniformly implement the `progressbar` role along with the necessary `aria-value*` attributes, rather than relying solely on `aria-label`.
