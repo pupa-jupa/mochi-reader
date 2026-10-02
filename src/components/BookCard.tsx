@@ -72,7 +72,14 @@ export function BookCard({ work, onToggleFavorite, onRevealSource, onRemove }: B
         </button>
       </div>
       <div className="book-card__meta">
-        <div aria-label={`Прочитано ${Math.round(work.progressPercent)}%`} className="progress">
+        <div
+          aria-label={`Прочитано ${Math.round(work.progressPercent)}%`}
+          aria-valuemax={100}
+          aria-valuemin={0}
+          aria-valuenow={Math.round(work.progressPercent)}
+          className="progress"
+          role="progressbar"
+        >
           <span style={{ width: `${Math.min(100, Math.max(0, work.progressPercent))}%` }} />
         </div>
         <button
