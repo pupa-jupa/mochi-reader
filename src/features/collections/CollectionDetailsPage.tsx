@@ -1,5 +1,5 @@
 import { ArrowLeft, FolderHeart, Library, Pencil, Save, Trash2, X } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { desktopBridge, isDesktopRuntime, type DesktopBridge } from '../../app/bridge';
@@ -66,36 +66,34 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
     }
   }
 
-  async function toggleFavorite(workId: string) {
-    const work = collection?.items.find((item) => item.id === workId);
-    if (!work) return;
-    const favorite = !work.favorite;
-    setCollection((current) =>
-      current
-        ? {
-            ...current,
-            items: current.items.map((item) =>
-              item.id === workId ? { ...item, favorite } : item,
-            ),
-          }
-        : current,
-    );
+  const toggleFavorite = useCallback(async (workId: string, currentFavorite: boolean) => {
+    const newFavorite = !currentFavorite;
+
+    setCollection((currentCollection) => {
+      if (!currentCollection) return currentCollection;
+      return {
+        ...currentCollection,
+        items: currentCollection.items.map((item) =>
+          item.id === workId ? { ...item, favorite: newFavorite } : item,
+        ),
+      };
+    });
+
     try {
-      await api.setFavorite(workId, favorite);
+      await api.setFavorite(workId, newFavorite);
     } catch {
-      setCollection((current) =>
-        current
-          ? {
-              ...current,
-              items: current.items.map((item) =>
-                item.id === workId ? { ...item, favorite: work.favorite } : item,
-              ),
-            }
-          : current,
-      );
+      setCollection((fallbackCollection) => {
+        if (!fallbackCollection) return fallbackCollection;
+        return {
+          ...fallbackCollection,
+          items: fallbackCollection.items.map((item) =>
+            item.id === workId ? { ...item, favorite: currentFavorite } : item,
+          ),
+        };
+      });
       setError('Не удалось изменить избранное.');
     }
-  }
+  }, [api]);
 
   function startEditing() {
     if (!collection) return;
@@ -202,7 +200,7 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
         <div className="collection-work-grid">
           {items.map((work) => (
             <div className="collection-work" key={work.id}>
-              <BookCard onToggleFavorite={() => void toggleFavorite(work.id)} work={work} />
+              <BookCard onToggleFavorite={toggleFavorite} work={work} />
               <button aria-label={`Убрать «${work.title}» из коллекции`} className="button button--ghost" onClick={() => void remove(work.id)} type="button"><Trash2 aria-hidden="true" /> Убрать</button>
             </div>
           ))}
