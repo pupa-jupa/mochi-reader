@@ -1,14 +1,14 @@
 import { BookOpen, FileSearch, FolderHeart, FolderOpen, Heart, Image as ImageIcon, MoreHorizontal, Play, Trash2 } from 'lucide-react';
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import React, { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { WorkSummary } from '../types/library';
 
 interface BookCardProps {
   work: WorkSummary;
-  onToggleFavorite?(): void;
-  onRevealSource?(): void;
-  onRemove?(): void;
+  onToggleFavorite?(id: string, currentFavorite: boolean): void;
+  onRevealSource?(id: string): void;
+  onRemove?(id: string, title: string): void;
 }
 
 const formatLabels: Record<string, string> = {
@@ -26,7 +26,9 @@ const formatLabels: Record<string, string> = {
   remote_manga: 'ONLINE',
 };
 
-export function BookCard({ work, onToggleFavorite, onRevealSource, onRemove }: BookCardProps) {
+// ⚡ Bolt: Wrapped in React.memo and using ID-based callbacks to prevent O(n) re-renders
+// when parent state updates. Components rendering lists of BookCards should pass stable useCallback references.
+export const BookCard = React.memo(function BookCard({ work, onToggleFavorite, onRevealSource, onRemove }: BookCardProps) {
   const coverClass = `book-card__cover book-card__cover--${work.kind}`;
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -79,7 +81,7 @@ export function BookCard({ work, onToggleFavorite, onRevealSource, onRemove }: B
           aria-label={work.favorite ? `Убрать «${work.title}» из избранного` : `Добавить «${work.title}» в избранное`}
           aria-pressed={work.favorite}
           className="book-card__favorite"
-          onClick={onToggleFavorite}
+          onClick={() => onToggleFavorite?.(work.id, work.favorite)}
           type="button"
         >
           <Heart aria-hidden="true" className="book-card__heart" fill={work.favorite ? 'currentColor' : 'none'} />
@@ -96,11 +98,11 @@ export function BookCard({ work, onToggleFavorite, onRevealSource, onRemove }: B
           <Link onClick={() => setMenu(null)} role="menuitem" to={`/read/${work.id}`}><Play aria-hidden="true" /> Читать</Link>
           <Link onClick={() => setMenu(null)} role="menuitem" to={`/work/${work.id}`}><FileSearch aria-hidden="true" /> Информация</Link>
           <Link onClick={() => setMenu(null)} role="menuitem" to={`/work/${work.id}?collection=1`}><FolderHeart aria-hidden="true" /> Добавить в коллекцию</Link>
-          {onToggleFavorite ? <button onClick={() => { onToggleFavorite(); setMenu(null); }} role="menuitem" type="button"><Heart aria-hidden="true" /> {work.favorite ? 'Убрать из избранного' : 'В избранное'}</button> : null}
-          {onRevealSource && work.format !== 'remote_manga' ? <button onClick={() => { onRevealSource(); setMenu(null); }} role="menuitem" type="button"><FolderOpen aria-hidden="true" /> Открыть расположение файла</button> : null}
-          {onRemove ? <><span className="book-context-menu__separator" /><button className="book-context-menu__danger" onClick={() => { onRemove(); setMenu(null); }} role="menuitem" type="button"><Trash2 aria-hidden="true" /> Убрать из библиотеки</button></> : null}
+          {onToggleFavorite ? <button onClick={() => { onToggleFavorite(work.id, work.favorite); setMenu(null); }} role="menuitem" type="button"><Heart aria-hidden="true" /> {work.favorite ? 'Убрать из избранного' : 'В избранное'}</button> : null}
+          {onRevealSource && work.format !== 'remote_manga' ? <button onClick={() => { onRevealSource(work.id); setMenu(null); }} role="menuitem" type="button"><FolderOpen aria-hidden="true" /> Открыть расположение файла</button> : null}
+          {onRemove ? <><span className="book-context-menu__separator" /><button className="book-context-menu__danger" onClick={() => { onRemove(work.id, work.title); setMenu(null); }} role="menuitem" type="button"><Trash2 aria-hidden="true" /> Убрать из библиотеки</button></> : null}
         </div>
       ) : null}
     </article>
   );
-}
+});

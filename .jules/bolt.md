@@ -1,0 +1,3 @@
+## 2023-10-02 - React List Item Re-rendering
+**Learning:** In a codebase heavily relying on React components that render lists (like `LibraryPage` rendering `BookCard`), using inline callbacks inside the mapping loop causes all items to re-render when the parent's state updates, even if the item's individual data hasn't changed.
+**Action:** Always refactor item component callbacks to pass up identifying arguments (like an ID) instead of closing over specific map iterations. Use `React.memo` on the child component and wrap parent callbacks in `useCallback`. This guarantees O(1) instead of O(n) re-renders when parent states change.
