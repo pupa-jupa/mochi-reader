@@ -67,7 +67,14 @@ export function BookCard({ work, onToggleFavorite, onRevealSource, onRemove }: B
           <h3 title={work.title}>{work.title}</h3>
           <p>{work.author || (work.kind === 'manga' ? 'Манга' : 'Автор не указан')}</p>
         </div>
-        <button aria-label={`Меню «${work.title}»`} className="icon-button" onClick={openMenu} type="button">
+        <button
+          aria-expanded={Boolean(menu)}
+          aria-haspopup="menu"
+          aria-label={`Меню «${work.title}»`}
+          className="icon-button"
+          onClick={openMenu}
+          type="button"
+        >
           <MoreHorizontal aria-hidden="true" />
         </button>
       </div>
