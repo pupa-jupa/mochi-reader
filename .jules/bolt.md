@@ -1,0 +1,3 @@
+## 2023-10-24 - Memoizing List Items Requires Stable Callbacks
+**Learning:** Using React.memo on a list component (like BookCard) is ineffective if the parent component passes down inline callback functions (e.g. `onToggleFavorite={() => toggleFavorite(id)}`). These inline functions are re-created on every render, causing the memoized component to fail its props equality check and re-render anyway.
+**Action:** When memoizing list components, refactor the component props to accept stable callbacks (wrapped in `useCallback` without inline parameters) that receive identifying arguments (like `id`). Use functional state updaters to remove closure dependencies from the callback when modifying state based on the callback.
