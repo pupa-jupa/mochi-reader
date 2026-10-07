@@ -69,6 +69,11 @@ fn detect_zip(file: File, path: &Path) -> AppResult<DetectedFormat> {
     let mut archive = ZipArchive::new(file).map_err(|error| AppError::Validation {
         message: format!("Не удалось прочитать архив: {error}"),
     })?;
+    if archive.len() > 5_000 {
+        return Err(AppError::Validation {
+            message: "Архив содержит слишком много файлов.".to_string(),
+        });
+    }
     let mut has_epub_mimetype = false;
     let mut has_epub_container = false;
     let mut fb2_count = 0_u32;

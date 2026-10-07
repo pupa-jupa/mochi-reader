@@ -1,0 +1,4 @@
+## 2024-10-07 - Add Archive Length Bound During Format Detection
+**Vulnerability:** Found a lack of `archive.len()` validation before traversing entries in `src-tauri/src/import/detect.rs` when inspecting ZIP archives, which could allow a ZIP bomb with massive numbers of empty files to DoS the application while parsing the archive's internal structures during file import/detection.
+**Learning:** While size bounds and compression ratios were added in `manga/manifest.rs` to limit the content *within* ZIPs, `detect_zip` lacked limits on the total number of entries in the ZIP header.
+**Prevention:** Apply `archive.len() > MAX_ARCHIVE_ENTRIES` validation broadly on `ZipArchive` allocations when determining archive metadata, aligned with other bounds in `parsers/epub.rs` and `manga/manifest.rs`.
