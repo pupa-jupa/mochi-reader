@@ -61,7 +61,7 @@ describe('work details', () => {
     expect(bridge.setWorkStatus).toHaveBeenCalledWith('work-1', 'completed');
     expect(bridge.addToCollection).toHaveBeenCalledWith('collection-1', 'work-1');
     fireEvent.click(screen.getByRole('button', { name: 'Редактировать информацию' }));
-    fireEvent.change(screen.getByLabelText('Название произведения'), {
+    fireEvent.change(screen.getByLabelText(/Название произведения/i), {
       target: { value: 'Moonlit pages revised' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить информацию' }));
