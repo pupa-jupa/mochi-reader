@@ -230,23 +230,23 @@ export function WorkDetailsPage({ bridge = desktopBridge }: WorkDetailsPageProps
                 <div><strong>Информация о произведении</strong><small>Поля используются в карточке и поиске по библиотеке.</small></div>
                 <Button aria-label="Закрыть редактирование" onClick={cancelEditing} variant="ghost"><X aria-hidden="true" /></Button>
               </div>
-              <label>
-                <span>Название произведения</span>
-                <input autoFocus maxLength={500} onChange={(event) => setMetadataField('title', event.target.value)} required value={metadata.title} />
+              <label htmlFor="metadata-title">
+                <span>Название произведения <span aria-hidden="true" className="text-red-500">*</span></span>
+                <input autoFocus id="metadata-title" maxLength={500} onChange={(event) => setMetadataField('title', event.target.value)} required value={metadata.title} />
               </label>
               <div className="metadata-form__columns">
-                <label>
+                <label htmlFor="metadata-author">
                   <span>Автор</span>
-                  <input maxLength={500} onChange={(event) => setMetadataField('author', event.target.value)} value={metadata.author ?? ''} />
+                  <input id="metadata-author" maxLength={500} onChange={(event) => setMetadataField('author', event.target.value)} value={metadata.author ?? ''} />
                 </label>
-                <label>
+                <label htmlFor="metadata-original-title">
                   <span>Оригинальное название</span>
-                  <input maxLength={500} onChange={(event) => setMetadataField('originalTitle', event.target.value)} value={metadata.originalTitle ?? ''} />
+                  <input id="metadata-original-title" maxLength={500} onChange={(event) => setMetadataField('originalTitle', event.target.value)} value={metadata.originalTitle ?? ''} />
                 </label>
               </div>
-              <label>
+              <label htmlFor="metadata-description">
                 <span>Описание</span>
-                <textarea maxLength={10_000} onChange={(event) => setMetadataField('description', event.target.value)} rows={5} value={metadata.description ?? ''} />
+                <textarea id="metadata-description" maxLength={10_000} onChange={(event) => setMetadataField('description', event.target.value)} rows={5} value={metadata.description ?? ''} />
               </label>
               <div className="metadata-form__actions">
                 <Button onClick={cancelEditing} variant="ghost">Отмена</Button>
