@@ -1,5 +1,5 @@
 import { ArrowLeft, FolderHeart, Library, Pencil, Save, Trash2, X } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { desktopBridge, isDesktopRuntime, type DesktopBridge } from '../../app/bridge';
@@ -40,6 +40,11 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
     };
   }, [api, id, shouldLoad]);
 
+  const collectionRef = useRef<CollectionDetails | null>(null);
+  useEffect(() => {
+    collectionRef.current = collection;
+  }, [collection]);
+
   const items = useMemo(() => {
     const values = [...(collection?.items ?? [])];
     if (sort === 'title') return values.sort((left, right) => left.title.localeCompare(right.title));
@@ -47,55 +52,61 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
     return values;
   }, [collection?.items, sort]);
 
-  async function remove(workId: string) {
-    if (!collection) return;
+  // ⚡ Bolt: Stable callbacks to avoid breaking BookCard's memoization
+  const remove = useCallback(async (workId: string) => {
+    const current = collectionRef.current;
+    if (!current) return;
     setError(null);
     try {
-      await api.removeFromCollection(collection.id, workId);
-      setCollection((current) =>
-        current
+      await api.removeFromCollection(current.id, workId);
+      setCollection((prev) =>
+        prev
           ? {
-              ...current,
-              itemCount: Math.max(0, current.itemCount - 1),
-              items: current.items.filter((item) => item.id !== workId),
+              ...prev,
+              itemCount: Math.max(0, prev.itemCount - 1),
+              items: prev.items.filter((item) => item.id !== workId),
             }
-          : current,
+          : prev,
       );
     } catch {
       setError('Не удалось убрать произведение из коллекции.');
     }
-  }
+  }, [api]);
 
-  async function toggleFavorite(workId: string) {
-    const work = collection?.items.find((item) => item.id === workId);
+  const toggleFavorite = useCallback(async (workId: string) => {
+    const current = collectionRef.current;
+    if (!current) return;
+    const work = current.items.find((item) => item.id === workId);
     if (!work) return;
     const favorite = !work.favorite;
-    setCollection((current) =>
-      current
+
+    setCollection((prev) =>
+      prev
         ? {
-            ...current,
-            items: current.items.map((item) =>
+            ...prev,
+            items: prev.items.map((item) =>
               item.id === workId ? { ...item, favorite } : item,
             ),
           }
-        : current,
+        : prev,
     );
+
     try {
       await api.setFavorite(workId, favorite);
     } catch {
-      setCollection((current) =>
-        current
+      setCollection((prev) =>
+        prev
           ? {
-              ...current,
-              items: current.items.map((item) =>
-                item.id === workId ? { ...item, favorite: work.favorite } : item,
+              ...prev,
+              items: prev.items.map((item) =>
+                item.id === workId ? { ...item, favorite: !favorite } : item,
               ),
             }
-          : current,
+          : prev,
       );
       setError('Не удалось изменить избранное.');
     }
-  }
+  }, [api]);
 
   function startEditing() {
     if (!collection) return;
@@ -202,7 +213,7 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
         <div className="collection-work-grid">
           {items.map((work) => (
             <div className="collection-work" key={work.id}>
-              <BookCard onToggleFavorite={() => void toggleFavorite(work.id)} work={work} />
+              <BookCard onToggleFavorite={toggleFavorite} work={work} />
               <button aria-label={`Убрать «${work.title}» из коллекции`} className="button button--ghost" onClick={() => void remove(work.id)} type="button"><Trash2 aria-hidden="true" /> Убрать</button>
             </div>
           ))}
