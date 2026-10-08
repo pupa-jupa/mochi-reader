@@ -40,6 +40,20 @@ img, svg { display: block; }
   white-space: nowrap;
   border: 0;
 }
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  z-index: 2000;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  color: var(--surface);
+  background: var(--accent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-float);
+  transition: top 0.2s ease-in-out;
+}
+.skip-link:focus-visible { top: 1rem; }
 .app { min-height: 100vh; }
 .app-shell { display: flex; height: 100vh; overflow: hidden; }
 .app-shell__main { display: grid; flex: 1; min-width: 0; grid-template-rows: var(--topbar-height) minmax(0, 1fr); }
