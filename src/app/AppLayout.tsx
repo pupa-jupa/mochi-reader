@@ -60,10 +60,11 @@ export function AppLayout() {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">Перейти к основному контенту</a>
       <Sidebar />
       <div className="app-shell__main">
         <TopBar />
-        <main className="content-canvas" id="main-content" ref={contentRef}>
+        <main className="content-canvas" id="main-content" ref={contentRef} tabIndex={-1}>
           <Outlet />
         </main>
       </div>
