@@ -1,0 +1,3 @@
+## 2024-05-24 - React.memo Stale Closures with Inline Callbacks
+**Learning:** In the React frontend, when memoizing list components (e.g., `BookCard`) that receive callbacks from parent list views, using inline callbacks or functions that capture closure variables defeats `React.memo` and can cause stale closures if not careful. The custom comparison function that ignores inline callbacks is an anti-pattern.
+**Action:** Refactor callback signatures to accept identifying arguments (e.g., `id`, `title`) instead of closing over specific item data, and always use stable callback references with `useCallback` in parent components to pass down to memoized children.
