@@ -1,0 +1,4 @@
+## 2025-02-14 - Fix SQL injection in progress_repository.rs
+**Vulnerability:** Found a SQL injection vulnerability in `src-tauri/src/database/progress_repository.rs` where `format!` was used to dynamically inject the `column` identifier into a SQL `WHERE` clause: `format!("SELECT ... FROM reading_progress WHERE {} = ?1", column)`.
+**Learning:** This existed because the developer wanted to reuse the same query for both `work_id` and `content_identity` lookups without writing separate SQL strings, and mistakenly assumed the internal caller would only provide safe identifiers.
+**Prevention:** Do not use `format!` to dynamically insert column or table names into SQL strings when using `rusqlite`. Always use a strict `match` statement allowlist to validate dynamic identifiers if reusing query strings is necessary, or write separate queries.
