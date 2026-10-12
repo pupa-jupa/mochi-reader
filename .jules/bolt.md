@@ -1,0 +1,3 @@
+## 2023-10-24 - Stable Callbacks in List Components
+**Learning:** In the React frontend, when memoizing list components (e.g., `BookCard`) that receive callbacks from parent list views, `React.memo` is defeated if parent components pass inline arrow functions that close over specific item data. This forces the entire list to re-render whenever the parent updates.
+**Action:** Always refactor callback signatures on list components to accept identifying arguments (e.g., `id`, `title`) and use `useCallback` in the parent to pass stable references. The child component should then supply its own identifiers when invoking the callback.
