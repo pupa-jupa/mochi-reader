@@ -42,13 +42,15 @@ describe('book card context menu', () => {
 
     expect(screen.getByRole('menu')).toBeVisible();
     expect(screen.getByRole('menuitem', { name: 'Читать' })).toHaveAttribute('href', '/read/work-1');
+
     fireEvent.click(screen.getByRole('menuitem', { name: 'Открыть расположение файла' }));
+    expect(onRevealSource).toHaveBeenCalledWith('work-1');
+
     fireEvent.contextMenu(screen.getByRole('link', { name: 'Открыть «Moon Book»' }), {
       clientX: 120,
       clientY: 80,
     });
     fireEvent.click(screen.getByRole('menuitem', { name: 'Убрать из библиотеки' }));
-    expect(onRevealSource).toHaveBeenCalledOnce();
-    expect(onRemove).toHaveBeenCalledOnce();
+    expect(onRemove).toHaveBeenCalledWith('work-1', 'Moon Book');
   });
 });
