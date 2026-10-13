@@ -85,9 +85,21 @@ impl<'connection> ProgressRepository<'connection> {
     }
 
     fn query_one(&self, column: &str, value: &str) -> AppResult<Option<ReadingProgress>> {
+        // SECURITY: Validate column name to prevent SQL injection.
+        // Never use format! with unvalidated dynamic column names.
+        let safe_column = match column {
+            "work_id" => "work_id",
+            "content_identity" => "content_identity",
+            _ => {
+                return Err(AppError::Validation {
+                    message: "Invalid column for reading_progress query".to_string(),
+                });
+            }
+        };
+
         let sql = format!(
             "SELECT content_identity, work_id, locator_json, percent, reader_mode, updated_at
-             FROM reading_progress WHERE {column} = ?1"
+             FROM reading_progress WHERE {safe_column} = ?1"
         );
         self.connection
             .query_row(&sql, [value], map_progress)
