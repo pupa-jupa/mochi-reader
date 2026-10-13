@@ -12,7 +12,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description, pose = 'empty-library', actions }: EmptyStateProps) {
   return (
-    <section className="empty-state">
+    <section aria-live="polite" className="empty-state">
       <Mascot className="empty-state__mascot" pose={pose} />
       <div className="empty-state__copy">
         <p className="eyebrow">Нет данных</p>
