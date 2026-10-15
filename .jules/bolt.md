@@ -1,0 +1,3 @@
+## 2026-10-15 - Wrap List Item Components with React.memo
+**Learning:** When memoizing list components (e.g., `BookCard`) that receive callbacks from parent list views, it's essential that parent components pass stable callback references. Passing inline functions inside a mapped list defeats `React.memo` by causing unnecessary re-renders when parent state changes.
+**Action:** Always wrap list items with `React.memo` and refactor callback signatures to accept identifying arguments (e.g., `id`, `title`) so parent components can provide stable `useCallback` references without closing over specific item data.
