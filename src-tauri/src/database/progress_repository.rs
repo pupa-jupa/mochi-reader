@@ -85,9 +85,18 @@ impl<'connection> ProgressRepository<'connection> {
     }
 
     fn query_one(&self, column: &str, value: &str) -> AppResult<Option<ReadingProgress>> {
+        // SECURITY: Use a strict allowlist to prevent SQL injection in dynamic column names
+        let valid_column = match column {
+            "work_id" | "content_identity" => column,
+            _ => {
+                return Err(AppError::Validation {
+                    message: "Недопустимое имя столбца для запроса".to_string(),
+                });
+            }
+        };
         let sql = format!(
             "SELECT content_identity, work_id, locator_json, percent, reader_mode, updated_at
-             FROM reading_progress WHERE {column} = ?1"
+             FROM reading_progress WHERE {valid_column} = ?1"
         );
         self.connection
             .query_row(&sql, [value], map_progress)
