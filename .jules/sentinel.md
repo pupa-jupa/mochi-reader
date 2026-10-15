@@ -1,0 +1,4 @@
+## 2024-05-24 - SQL Injection Risk with Dynamic Column Names
+**Vulnerability:** Dynamic column names were directly interpolated into SQL strings using the `format!` macro in `src-tauri/src/database/progress_repository.rs` (`query_one`). While the current callers use safe hardcoded strings, this pattern is inherently dangerous and can lead to SQL injection if new callers pass unsanitized input.
+**Learning:** `rusqlite` parameters (`?1`) cannot be used for column or table names, only for values. Developers often use `format!` to construct queries dynamically, inadvertently creating injection vulnerabilities.
+**Prevention:** Always use a strict `match` statement allowlist to validate dynamic identifiers (like column names) before interpolating them into SQL queries. Never use untrusted input directly in `format!` for SQL string construction.
