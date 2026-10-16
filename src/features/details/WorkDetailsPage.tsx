@@ -214,7 +214,7 @@ export function WorkDetailsPage({ bridge = desktopBridge }: WorkDetailsPageProps
                 <span>Запись и прогресс сохранены. Укажите новое расположение файла, чтобы продолжить чтение.</span>
               </div>
               <Button disabled={relinking} onClick={() => void relinkSource()} variant="secondary">
-                <Link2 aria-hidden="true" /> {relinking ? 'Ищу…' : 'Найти исходный файл'}
+                {relinking ? <><span className="spinner" /> Ищу…</> : <><Link2 aria-hidden="true" /> Найти исходный файл</>}
               </Button>
             </div>
           ) : null}
@@ -250,7 +250,9 @@ export function WorkDetailsPage({ bridge = desktopBridge }: WorkDetailsPageProps
               </label>
               <div className="metadata-form__actions">
                 <Button onClick={cancelEditing} variant="ghost">Отмена</Button>
-                <Button aria-label="Сохранить информацию" disabled={saving || !metadata.title.trim()} type="submit"><Save aria-hidden="true" /> {saving ? 'Сохраняю…' : 'Сохранить'}</Button>
+                <Button aria-label="Сохранить информацию" disabled={saving || !metadata.title.trim()} type="submit">
+                  {saving ? <><span className="spinner" /> Сохраняю…</> : <><Save aria-hidden="true" /> Сохранить</>}
+                </Button>
               </div>
             </form>
           ) : null}
