@@ -185,7 +185,9 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
             <label htmlFor="collection-details-description">Описание коллекции</label>
             <textarea id="collection-details-description" maxLength={2_000} onChange={(event) => setDescriptionDraft(event.target.value)} rows={3} value={descriptionDraft} />
           </div>
-          <button aria-label="Сохранить коллекцию" className="button button--primary" disabled={busy || !titleDraft.trim()} type="submit"><Save aria-hidden="true" /> Сохранить</button>
+          <button aria-label="Сохранить коллекцию" className="button button--primary" disabled={busy || !titleDraft.trim()} type="submit">
+            {busy ? <><span className="spinner" /> Сохраняю…</> : <><Save aria-hidden="true" /> Сохранить</>}
+          </button>
           <button aria-label="Отменить редактирование" className="icon-button" onClick={() => setEditing(false)} type="button"><X aria-hidden="true" /></button>
         </form>
       ) : null}
