@@ -1,5 +1,5 @@
 import { ArrowLeft, FolderHeart, Library, Pencil, Save, Trash2, X } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { desktopBridge, isDesktopRuntime, type DesktopBridge } from '../../app/bridge';
@@ -18,6 +18,11 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
   const api = bridge ?? desktopBridge;
   const shouldLoad = Boolean(bridge) || isDesktopRuntime();
   const [collection, setCollection] = useState<CollectionDetails | null>(null);
+  const collectionRef = useRef<CollectionDetails | null>(null);
+
+  useEffect(() => {
+    collectionRef.current = collection;
+  }, [collection]);
   const [loading, setLoading] = useState(shouldLoad);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<CollectionSort>('added');
@@ -47,7 +52,8 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
     return values;
   }, [collection?.items, sort]);
 
-  async function remove(workId: string) {
+  const handleRemove = useCallback(async (workId: string) => {
+    const collection = collectionRef.current;
     if (!collection) return;
     setError(null);
     try {
@@ -64,9 +70,10 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
     } catch {
       setError('Не удалось убрать произведение из коллекции.');
     }
-  }
+  }, [api]);
 
-  async function toggleFavorite(workId: string) {
+  const handleToggleFavorite = useCallback(async (workId: string) => {
+    const collection = collectionRef.current;
     const work = collection?.items.find((item) => item.id === workId);
     if (!work) return;
     const favorite = !work.favorite;
@@ -95,7 +102,7 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
       );
       setError('Не удалось изменить избранное.');
     }
-  }
+  }, [api]);
 
   function startEditing() {
     if (!collection) return;
@@ -202,8 +209,8 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
         <div className="collection-work-grid">
           {items.map((work) => (
             <div className="collection-work" key={work.id}>
-              <BookCard onToggleFavorite={() => void toggleFavorite(work.id)} work={work} />
-              <button aria-label={`Убрать «${work.title}» из коллекции`} className="button button--ghost" onClick={() => void remove(work.id)} type="button"><Trash2 aria-hidden="true" /> Убрать</button>
+              <BookCard onToggleFavorite={handleToggleFavorite} work={work} />
+              <button aria-label={`Убрать «${work.title}» из коллекции`} className="button button--ghost" onClick={() => void handleRemove(work.id)} type="button"><Trash2 aria-hidden="true" /> Убрать</button>
             </div>
           ))}
         </div>
