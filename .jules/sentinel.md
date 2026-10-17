@@ -1,0 +1,4 @@
+## 2025-02-28 - rusqlite format! vulnerability
+**Vulnerability:** SQL injection vulnerability in `src-tauri/src/database/progress_repository.rs` where `format!` was used to dynamically insert column names into the query string.
+**Learning:** Using `format!` with rusqlite to dynamically insert table or column names can introduce SQL injection if the input is not strictly validated, as parameterized queries (`?1`) do not work for identifiers.
+**Prevention:** Always use a strict `match` statement allowlist to validate dynamic identifiers (like column names) before inserting them into SQL strings using `format!`.
