@@ -88,11 +88,17 @@ impl<'connection> ProgressRepository<'connection> {
         // 🛡️ Sentinel: Prevent SQL injection by matching on allowed column names
         // instead of using `format!` to interpolate them into the query.
         let sql = match column {
-            "work_id" => "SELECT content_identity, work_id, locator_json, percent, reader_mode, updated_at FROM reading_progress WHERE work_id = ?1",
-            "content_identity" => "SELECT content_identity, work_id, locator_json, percent, reader_mode, updated_at FROM reading_progress WHERE content_identity = ?1",
-            _ => return Err(AppError::Validation {
-                message: "Invalid column for reading_progress query".to_string()
-            }),
+            "work_id" => {
+                "SELECT content_identity, work_id, locator_json, percent, reader_mode, updated_at FROM reading_progress WHERE work_id = ?1"
+            }
+            "content_identity" => {
+                "SELECT content_identity, work_id, locator_json, percent, reader_mode, updated_at FROM reading_progress WHERE content_identity = ?1"
+            }
+            _ => {
+                return Err(AppError::Validation {
+                    message: "Invalid column for reading_progress query".to_string(),
+                });
+            }
         };
         self.connection
             .query_row(sql, [value], map_progress)
