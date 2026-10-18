@@ -1,0 +1,11 @@
+--- src/components/BookCard.test.tsx
++++ src/components/BookCard.test.tsx
+@@ -48,7 +48,7 @@
+     });
+     fireEvent.click(screen.getByRole('menuitem', { name: 'Убрать из библиотеки' }));
+-    expect(onRevealSource).toHaveBeenCalledOnce();
+-    expect(onRemove).toHaveBeenCalledOnce();
++    expect(onRevealSource).toHaveBeenCalledWith('work-1');
++    expect(onRemove).toHaveBeenCalledWith('work-1', 'Moon Book');
+   });
+ });
