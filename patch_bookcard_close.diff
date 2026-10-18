@@ -1,0 +1,8 @@
+--- src/components/BookCard.tsx
++++ src/components/BookCard.tsx
+@@ -103,4 +103,4 @@
+       ) : null}
+     </article>
+   );
+-}
++});
