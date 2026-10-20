@@ -226,7 +226,7 @@ export function NotesPage({ bridge }: NotesPageProps) {
                     {annotation.kind !== 'quote' ? (
                       <label><span>Цвет выделения</span><select onChange={(event) => setColorDraft(event.target.value as HighlightColor)} value={colorDraft ?? 'sakura'}>{Object.entries(colorLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
                     ) : null}
-                    <div><button onClick={() => setEditingId(null)} type="button">Отмена</button><button className="button button--primary" disabled={busyId === annotation.id || (annotation.kind === 'note' && !noteDraft.trim())} type="submit">Сохранить изменения</button></div>
+                    <div><button onClick={() => setEditingId(null)} type="button">Отмена</button><button className="button button--primary" disabled={busyId === annotation.id || (annotation.kind === 'note' && !noteDraft.trim())} type="submit">{busyId === annotation.id ? <span className="spinner" /> : null} Сохранить изменения</button></div>
                   </form>
                 ) : annotation.note ? <p className="note-card__comment">{annotation.note}</p> : null}
               </div>
