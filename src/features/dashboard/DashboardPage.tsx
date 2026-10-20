@@ -1,5 +1,5 @@
 import { ArrowRight, BookOpen, Database, Feather, Plus, Sparkles } from 'lucide-react';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from 'zustand';
 
@@ -17,6 +17,8 @@ export function DashboardPage() {
   const reading = items.find((item) => item.status === 'reading' || item.progressPercent > 0);
   const readingProgress = Math.round(reading?.progressPercent ?? 0);
   const today = new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'long' }).format(new Date());
+
+  const handleToggleFavorite = useCallback((id: string) => void libraryStore.getState().toggleFavorite(id), []);
 
   useEffect(() => {
     if (status === 'idle') void libraryStore.getState().load();
@@ -84,7 +86,7 @@ export function DashboardPage() {
             <Link className="text-link" to="/library">Смотреть все <ArrowRight aria-hidden="true" /></Link>
           </div>
           <div className="library-grid library-grid--compact">
-            {items.slice(0, 4).map((work) => <BookCard key={work.id} onToggleFavorite={() => void libraryStore.getState().toggleFavorite(work.id)} work={work} />)}
+            {items.slice(0, 4).map((work) => <BookCard key={work.id} onToggleFavorite={handleToggleFavorite} work={work} />)}
           </div>
           <div aria-hidden="true" className="journal-shelf__edge" />
         </section>

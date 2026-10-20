@@ -49,6 +49,8 @@ describe('book card context menu', () => {
     });
     fireEvent.click(screen.getByRole('menuitem', { name: 'Убрать из библиотеки' }));
     expect(onRevealSource).toHaveBeenCalledOnce();
+    expect(onRevealSource).toHaveBeenCalledWith('work-1');
     expect(onRemove).toHaveBeenCalledOnce();
+    expect(onRemove).toHaveBeenCalledWith('work-1', 'Moon Book');
   });
 });
