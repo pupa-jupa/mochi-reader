@@ -1,0 +1,3 @@
+## 2023-10-22 - Optimizing BookCard Callbacks
+**Learning:** In the React frontend, when memoizing list components (`BookCard`) that receive callbacks from parent list views, ensure parent components pass stable callback references. Avoid using `React.memo` with custom comparison functions that ignore inline callbacks. Refactoring callback signatures to accept identifying arguments (e.g., `id`, `title`) instead of closing over specific item data allows parents to pass down a stable, single callback.
+**Action:** Always wrap `BookCard` in `memo` and refactor its `onToggleFavorite`, `onRevealSource`, and `onRemove` callbacks to accept the required book arguments (`id`, `title`). Then, in parent components, use stable callbacks.
