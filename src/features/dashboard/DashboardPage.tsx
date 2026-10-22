@@ -84,7 +84,7 @@ export function DashboardPage() {
             <Link className="text-link" to="/library">Смотреть все <ArrowRight aria-hidden="true" /></Link>
           </div>
           <div className="library-grid library-grid--compact">
-            {items.slice(0, 4).map((work) => <BookCard key={work.id} onToggleFavorite={() => void libraryStore.getState().toggleFavorite(work.id)} work={work} />)}
+            {items.slice(0, 4).map((work) => <BookCard key={work.id} onToggleFavorite={libraryStore.getState().toggleFavorite} work={work} />)}
           </div>
           <div aria-hidden="true" className="journal-shelf__edge" />
         </section>
