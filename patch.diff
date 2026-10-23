@@ -1,0 +1,70 @@
+<<<<<<< SEARCH
+import { BookOpen, FileSearch, FolderHeart, FolderOpen, Heart, Image as ImageIcon, MoreHorizontal, Play, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { Link } from 'react-router-dom';
+
+import type { WorkSummary } from '../types/library';
+
+interface BookCardProps {
+  work: WorkSummary;
+  onToggleFavorite?(): void;
+  onRevealSource?(): void;
+  onRemove?(): void;
+}
+=======
+import { BookOpen, FileSearch, FolderHeart, FolderOpen, Heart, Image as ImageIcon, MoreHorizontal, Play, Trash2 } from 'lucide-react';
+import { memo, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { Link } from 'react-router-dom';
+
+import type { WorkSummary } from '../types/library';
+
+interface BookCardProps {
+  work: WorkSummary;
+  onToggleFavorite?(id: string): void;
+  onRevealSource?(id: string): void;
+  onRemove?(id: string, title: string): void;
+}
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+export function BookCard({ work, onToggleFavorite, onRevealSource, onRemove }: BookCardProps) {
+  const coverClass = `book-card__cover book-card__cover--${work.kind}`;
+=======
+export const BookCard = memo(function BookCard({ work, onToggleFavorite, onRevealSource, onRemove }: BookCardProps) {
+  const coverClass = `book-card__cover book-card__cover--${work.kind}`;
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+        <button
+          aria-label={work.favorite ? `Убрать «${work.title}» из избранного` : `Добавить «${work.title}» в избранное`}
+          aria-pressed={work.favorite}
+          className="book-card__favorite"
+          onClick={onToggleFavorite}
+          type="button"
+        >
+=======
+        <button
+          aria-label={work.favorite ? `Убрать «${work.title}» из избранного` : `Добавить «${work.title}» в избранное`}
+          aria-pressed={work.favorite}
+          className="book-card__favorite"
+          onClick={() => onToggleFavorite?.(work.id)}
+          type="button"
+        >
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+          {onToggleFavorite ? <button onClick={() => { onToggleFavorite(); setMenu(null); }} role="menuitem" type="button"><Heart aria-hidden="true" /> {work.favorite ? 'Убрать из избранного' : 'В избранное'}</button> : null}
+          {onRevealSource && work.format !== 'remote_manga' ? <button onClick={() => { onRevealSource(); setMenu(null); }} role="menuitem" type="button"><FolderOpen aria-hidden="true" /> Открыть расположение файла</button> : null}
+          {onRemove ? <><span className="book-context-menu__separator" /><button className="book-context-menu__danger" onClick={() => { onRemove(); setMenu(null); }} role="menuitem" type="button"><Trash2 aria-hidden="true" /> Убрать из библиотеки</button></> : null}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+=======
+          {onToggleFavorite ? <button onClick={() => { onToggleFavorite(work.id); setMenu(null); }} role="menuitem" type="button"><Heart aria-hidden="true" /> {work.favorite ? 'Убрать из избранного' : 'В избранное'}</button> : null}
+          {onRevealSource && work.format !== 'remote_manga' ? <button onClick={() => { onRevealSource(work.id); setMenu(null); }} role="menuitem" type="button"><FolderOpen aria-hidden="true" /> Открыть расположение файла</button> : null}
+          {onRemove ? <><span className="book-context-menu__separator" /><button className="book-context-menu__danger" onClick={() => { onRemove(work.id, work.title); setMenu(null); }} role="menuitem" type="button"><Trash2 aria-hidden="true" /> Убрать из библиотеки</button></> : null}
+        </div>
+      ) : null}
+    </article>
+  );
+});
+>>>>>>> REPLACE
