@@ -88,9 +88,11 @@ impl<'connection> ProgressRepository<'connection> {
         let column = match column {
             "work_id" => "work_id",
             "content_identity" => "content_identity",
-            _ => return Err(AppError::Validation {
-                message: format!("Недопустимое имя столбца: {}", column),
-            }),
+            _ => {
+                return Err(AppError::Validation {
+                    message: format!("Недопустимое имя столбца: {}", column),
+                });
+            }
         };
         // 🛡️ Sentinel: Validate dynamic column names using a strict match allowlist to prevent SQL injection vulnerabilities.
         let sql = format!(
