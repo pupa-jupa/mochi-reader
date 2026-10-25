@@ -1,0 +1,3 @@
+## 2023-10-25 - React.memo and Stable Callbacks
+**Learning:** Using `React.memo` with custom comparison functions that ignore inline callbacks causes stale closures. Lists components passing inline closures to children (like `BookCard`) cause child components to re-render every time the parent list updates.
+**Action:** Always wrap components rendered in large lists (like `BookCard`) with `React.memo` and refactor their props to accept identifying information (e.g., `id`, `title`) so that parent components can provide stable callbacks via `useCallback` instead of using inline arrow functions. When the stable callback needs to access changing parent state, use `useRef` to maintain a reference to the latest state without changing the callback's identity.
