@@ -85,9 +85,18 @@ impl<'connection> ProgressRepository<'connection> {
     }
 
     fn query_one(&self, column: &str, value: &str) -> AppResult<Option<ReadingProgress>> {
+        let valid_column = match column {
+            "work_id" => "work_id",
+            "content_identity" => "content_identity",
+            _ => return Err(AppError::Validation {
+                message: "Недопустимое имя столбца.".to_string(),
+            }),
+        };
+        // 🛡️ Sentinel: Fix potential SQL injection by validating the column name
+        // against a strict allowlist before interpolating it into the query.
         let sql = format!(
             "SELECT content_identity, work_id, locator_json, percent, reader_mode, updated_at
-             FROM reading_progress WHERE {column} = ?1"
+             FROM reading_progress WHERE {valid_column} = ?1"
         );
         self.connection
             .query_row(&sql, [value], map_progress)
