@@ -226,14 +226,14 @@ export function NotesPage({ bridge }: NotesPageProps) {
                     {annotation.kind !== 'quote' ? (
                       <label><span>Цвет выделения</span><select onChange={(event) => setColorDraft(event.target.value as HighlightColor)} value={colorDraft ?? 'sakura'}>{Object.entries(colorLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
                     ) : null}
-                    <div><button onClick={() => setEditingId(null)} type="button">Отмена</button><button className="button button--primary" disabled={busyId === annotation.id || (annotation.kind === 'note' && !noteDraft.trim())} type="submit">Сохранить изменения</button></div>
+                    <div><button onClick={() => setEditingId(null)} type="button">Отмена</button><button className="button button--primary" disabled={busyId === annotation.id || (annotation.kind === 'note' && !noteDraft.trim())} type="submit">{busyId === annotation.id ? <span className="spinner" /> : null} Сохранить изменения</button></div>
                   </form>
                 ) : annotation.note ? <p className="note-card__comment">{annotation.note}</p> : null}
               </div>
               <div className="note-card__actions">
                 <Link aria-label={`Открыть фрагмент: ${annotation.quote}`} className="icon-button" to={`/read/${annotation.workId}?annotation=${encodeURIComponent(annotation.id)}`}><BookOpen aria-hidden="true" /></Link>
                 <button aria-label={`Редактировать заметку: ${annotation.quote}`} className="icon-button" onClick={() => beginEdit(annotation)} type="button"><Pencil aria-hidden="true" /></button>
-                <button aria-label={`Удалить заметку: ${annotation.quote}`} className="icon-button" disabled={busyId === annotation.id} onClick={() => void remove(annotation)} type="button"><Trash2 aria-hidden="true" /></button>
+                <button aria-label={`Удалить заметку: ${annotation.quote}`} className="icon-button" disabled={busyId === annotation.id} onClick={() => void remove(annotation)} type="button">{busyId === annotation.id ? <span className="spinner" /> : <Trash2 aria-hidden="true" />}</button>
               </div>
             </article>
           ))}
