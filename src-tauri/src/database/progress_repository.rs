@@ -91,7 +91,7 @@ impl<'connection> ProgressRepository<'connection> {
             _ => {
                 return Err(AppError::Validation {
                     message: "Недопустимое имя столбца.".to_string(),
-                })
+                });
             }
         };
         let sql = format!(
