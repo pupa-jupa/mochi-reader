@@ -1,0 +1,3 @@
+## 2023-10-31 - Memoizing List Components and Callbacks
+**Learning:** When using React.memo on list items (like BookCard), passing inline callbacks (e.g. `() => onAction(id)`) from the parent breaks memoization because the callback reference changes every render. Custom comparison functions for React.memo that ignore inline callbacks are an anti-pattern causing stale closures.
+**Action:** Always wrap parent handlers in `useCallback` without item-specific dependencies, and change the child component's callback signature to accept identifying parameters (like `id` or `title`) so it can pass them back up to the parent.
