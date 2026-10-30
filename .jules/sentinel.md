@@ -1,0 +1,4 @@
+## 2024-05-18 - Prevent SQL injection when using dynamic column names
+**Vulnerability:** The `query_one` method in `progress_repository.rs` used `format!` to dynamically insert a column name into an SQL query (`SELECT ... FROM reading_progress WHERE {column} = ?1`). This creates a risk of SQL injection if `column` is ever populated from untrusted user input, bypassing prepared statement parameterization which only protects values, not identifiers.
+**Learning:** `rusqlite` prevents SQL injection for values via parameterization (`?1`, `?2`, etc.), but table and column names cannot be parameterized. Using `format!` for identifiers introduces vulnerability risk.
+**Prevention:** Never use `format!` to dynamically insert table or column names without strict validation. Always use a `match` statement allowlist to validate dynamic identifiers against a known, safe set of permitted values before formatting them into an SQL string.
