@@ -1,5 +1,5 @@
 import { ArrowLeft, FolderHeart, Library, Pencil, Save, Trash2, X } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { desktopBridge, isDesktopRuntime, type DesktopBridge } from '../../app/bridge';
@@ -26,6 +26,11 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const collectionRef = useRef<CollectionDetails | null>(null);
+
+  useEffect(() => {
+    collectionRef.current = collection;
+  }, [collection]);
 
   useEffect(() => {
     if (!shouldLoad || !id) return;
@@ -47,11 +52,12 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
     return values;
   }, [collection?.items, sort]);
 
-  async function remove(workId: string) {
-    if (!collection) return;
+  const remove = useCallback(async (workId: string) => {
+    const currentCollection = collectionRef.current;
+    if (!currentCollection) return;
     setError(null);
     try {
-      await api.removeFromCollection(collection.id, workId);
+      await api.removeFromCollection(currentCollection.id, workId);
       setCollection((current) =>
         current
           ? {
@@ -64,10 +70,10 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
     } catch {
       setError('Не удалось убрать произведение из коллекции.');
     }
-  }
+  }, [api]);
 
-  async function toggleFavorite(workId: string) {
-    const work = collection?.items.find((item) => item.id === workId);
+  const toggleFavorite = useCallback(async (workId: string) => {
+    const work = collectionRef.current?.items.find((item) => item.id === workId);
     if (!work) return;
     const favorite = !work.favorite;
     setCollection((current) =>
@@ -95,7 +101,7 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
       );
       setError('Не удалось изменить избранное.');
     }
-  }
+  }, [api]);
 
   function startEditing() {
     if (!collection) return;
@@ -202,7 +208,7 @@ export function CollectionDetailsPage({ bridge }: CollectionDetailsPageProps) {
         <div className="collection-work-grid">
           {items.map((work) => (
             <div className="collection-work" key={work.id}>
-              <BookCard onToggleFavorite={() => void toggleFavorite(work.id)} work={work} />
+              <BookCard onToggleFavorite={toggleFavorite} work={work} />
               <button aria-label={`Убрать «${work.title}» из коллекции`} className="button button--ghost" onClick={() => void remove(work.id)} type="button"><Trash2 aria-hidden="true" /> Убрать</button>
             </div>
           ))}
