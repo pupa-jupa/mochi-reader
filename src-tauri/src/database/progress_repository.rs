@@ -85,13 +85,14 @@ impl<'connection> ProgressRepository<'connection> {
     }
 
     fn query_one(&self, column: &str, value: &str) -> AppResult<Option<ReadingProgress>> {
-        // Use a strict match statement allowlist to validate dynamic identifiers
         let column = match column {
             "work_id" => "work_id",
             "content_identity" => "content_identity",
-            _ => return Err(AppError::Validation {
-                message: "Недопустимое имя столбца.".to_string(),
-            }),
+            _ => {
+                return Err(AppError::Validation {
+                    message: "Недопустимое имя столбца.".to_string(),
+                });
+            }
         };
         let sql = format!(
             "SELECT content_identity, work_id, locator_json, percent, reader_mode, updated_at
