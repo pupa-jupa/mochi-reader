@@ -88,7 +88,11 @@ impl<'connection> ProgressRepository<'connection> {
         let valid_column = match column {
             "work_id" => "work_id",
             "content_identity" => "content_identity",
-            _ => return Err(AppError::Validation { message: "Недопустимое имя столбца.".to_string() }), // fallback although not reachable directly from pub fns
+            _ => {
+                return Err(AppError::Validation {
+                    message: "Недопустимое имя столбца.".to_string(),
+                });
+            } // fallback although not reachable directly from pub fns
         };
 
         let sql = format!(
