@@ -1,0 +1,4 @@
+
+## 2024-11-03 - Memoizing List Components with Stable Callbacks
+**Learning:** Using `React.memo` on list items (like `BookCard`) is ineffective if parent components pass inline callbacks (e.g., `onToggleFavorite={() => toggleFavorite(work.id)}`), causing unneeded re-renders on every parent state change. Using custom comparison functions in `React.memo` to ignore these callback changes is an anti-pattern that leads to stale closures.
+**Action:** Always refactor child component callback signatures to accept identifying arguments (`id`, `title`) so parents can pass stable functions via `useCallback`. If a stable callback requires access to frequently changing parent state (like the current `collection`), use `useRef` to maintain a mutable reference to that state inside the `useCallback` to avoid dependency updates.
