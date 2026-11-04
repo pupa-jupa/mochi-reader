@@ -1,0 +1,3 @@
+## 2024-05-24 - React.memo and Stale Closures in List Items
+**Learning:** Using `React.memo` on list components (like `BookCard`) provides no benefit if parent components pass inline arrow functions as callbacks that close over item data. This anti-pattern recreates callbacks every render, causing the memoized component to re-render anyway, and can lead to stale closures if not careful.
+**Action:** Always refactor callback signatures on memoized list components to accept identifying arguments (e.g., `id`, `title`) instead of closing over item data. Then, define these callbacks using `useCallback` with stable dependencies in the parent list component to ensure they maintain the same reference across renders.
