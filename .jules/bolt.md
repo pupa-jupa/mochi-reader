@@ -1,0 +1,5 @@
+## 2024-05-24 - Memoize React list items and stabilize callback references
+
+**Learning:** When using list components like `BookCard` in React, inline functions in parent components (e.g., `onToggleFavorite={() => toggle(work.id)}`) break the effect of `React.memo`, leading to unnecessary re-renders. Additionally, passing inline callbacks to memoized list components is an anti-pattern. If you try to provide stable callback references that close over state (like `collection`), you can run into stale closure bugs if you omit the state from the dependency array to preserve the stable reference.
+
+**Action:** Refactor child list components to pass identifying arguments (like `id`) out via callbacks. In parent components, use `useCallback` to create stable callback references. When you need to access state without adding it to the dependency array (which would recreate the callback), use a `useRef` (e.g., `collectionRef.current = collection;`) to access the latest state safely inside the stable callback.
