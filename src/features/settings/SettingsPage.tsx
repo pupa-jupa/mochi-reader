@@ -178,8 +178,8 @@ export function SettingsPage({ bridge }: SettingsPageProps) {
         <div className="diagnostic-actions">
           <div><strong>Журналы и сведения о системе</strong><small>Копия не содержит путей к книгам, названий и содержимого библиотеки.</small></div>
           <div>
-            <Button aria-label="Открыть папку логов" disabled={diagnosticBusy || !shouldLoadCache} onClick={() => void openLogs()} variant="secondary"><FolderOpen aria-hidden="true" /> Открыть папку логов</Button>
-            <Button aria-label="Скопировать диагностическую информацию" disabled={diagnosticBusy || !shouldLoadCache} onClick={() => void copyDiagnostics()} variant="secondary"><ClipboardCopy aria-hidden="true" /> Скопировать информацию</Button>
+            <Button aria-label="Открыть папку логов" disabled={diagnosticBusy || !shouldLoadCache} onClick={() => void openLogs()} variant="secondary">{diagnosticBusy ? <span className="spinner" /> : <FolderOpen aria-hidden="true" />} Открыть папку логов</Button>
+            <Button aria-label="Скопировать диагностическую информацию" disabled={diagnosticBusy || !shouldLoadCache} onClick={() => void copyDiagnostics()} variant="secondary">{diagnosticBusy ? <span className="spinner" /> : <ClipboardCopy aria-hidden="true" />} Скопировать информацию</Button>
           </div>
         </div>
         {diagnosticNotice ? <div aria-live="polite" className="notice notice--success">{diagnosticNotice}</div> : null}

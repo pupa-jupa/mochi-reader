@@ -1,0 +1,11 @@
+<<<<<<< SEARCH
+            <Button aria-label="Открыть папку логов" disabled={diagnosticBusy || !shouldLoadCache} onClick={() => void openLogs()} variant="secondary"><FolderOpen aria-hidden="true" /> Открыть папку логов</Button>
+            <Button aria-label="Скопировать диагностическую информацию" disabled={diagnosticBusy || !shouldLoadCache} onClick={() => void copyDiagnostics()} variant="secondary"><ClipboardCopy aria-hidden="true" /> Скопировать информацию</Button>
+=======
+            <Button aria-label="Открыть папку логов" disabled={diagnosticBusy || !shouldLoadCache} onClick={() => void openLogs()} variant="secondary">
+              {diagnosticBusy ? <span className="spinner" /> : <FolderOpen aria-hidden="true" />} Открыть папку логов
+            </Button>
+            <Button aria-label="Скопировать диагностическую информацию" disabled={diagnosticBusy || !shouldLoadCache} onClick={() => void copyDiagnostics()} variant="secondary">
+              {diagnosticBusy ? <span className="spinner" /> : <ClipboardCopy aria-hidden="true" />} Скопировать информацию
+            </Button>
+>>>>>>> REPLACE
