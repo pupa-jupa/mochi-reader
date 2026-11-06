@@ -73,6 +73,20 @@ export function LibraryPage({ store = libraryStore, initialFilter = 'all' }: Lib
   );
   const visibleItems = items;
 
+  const handleRemove = useCallback((id: string, title: string) => {
+    if (window.confirm(`Убрать «${title}» из библиотеки? Исходный файл останется на месте.`)) {
+      void store.getState().remove(id);
+    }
+  }, [store]);
+
+  const handleRevealSource = useCallback((id: string) => {
+    void store.getState().revealSource(id);
+  }, [store]);
+
+  const handleToggleFavorite = useCallback((id: string) => {
+    void store.getState().toggleFavorite(id);
+  }, [store]);
+
   return (
     <div className="page library-page">
       <header className="page-heading library-heading">
@@ -188,13 +202,9 @@ export function LibraryPage({ store = libraryStore, initialFilter = 'all' }: Lib
             {visibleItems.map((work) => (
               <BookCard
                 key={work.id}
-                onRemove={() => {
-                  if (window.confirm(`Убрать «${work.title}» из библиотеки? Исходный файл останется на месте.`)) {
-                    void store.getState().remove(work.id);
-                  }
-                }}
-                onRevealSource={() => void store.getState().revealSource(work.id)}
-                onToggleFavorite={() => void store.getState().toggleFavorite(work.id)}
+                onRemove={handleRemove}
+                onRevealSource={handleRevealSource}
+                onToggleFavorite={handleToggleFavorite}
                 work={work}
               />
             ))}
